@@ -1,6 +1,6 @@
 package Spoon;
 use Spoon::Base -Base;
-our $VERSION = '0.19';
+our $VERSION = '0.20';
 
 const class_id => 'main';
 const config_class => 'Spoon::Config';

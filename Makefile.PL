@@ -10,7 +10,7 @@ requires(qw(
     perl 5.6.1
     Spiffy 0.21
     IO::All 0.32
-    Template 2.13
+    Template 2.10
 ));
 
 &WriteAll();

@@ -4,7 +4,6 @@ use IO::All; #XXX migrate to non-spiffy class
 
 const extract_to => '.';
 field quiet => 0;
-field 'hub';
 
 sub compress_from {
     $self->extract_to;

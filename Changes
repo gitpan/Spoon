@@ -1,5 +1,11 @@
 ---
-version: 0.32
+version: 0.20
+date:    Sat Dec 18 00:39:23 PST 2004
+changes:
+- Only require TemplateToolkit 2.10 because of Debian stable
+- 'hub' in Spoon::Installer caused memory cycles in Kwiki
+---
+version: 0.19
 date:    Wed Dec 15 13:13:10 PST 2004
 changes:
 - Spoon is now memory cycle free, which makes it much more suitable for use under mod_perl
