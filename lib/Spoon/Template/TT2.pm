@@ -1,29 +1,37 @@
 package Spoon::Template::TT2;
-use strict;
-use warnings;
-use Spoon::Template '-Base';
-use Template 2.0;
+use Spoon::Template -Base;
+
+field template_object =>
+      -init => '$self->create_template_object';
+
+sub compile_dir {
+    my $dir = $self->plugin_directory . '/ttc';
+    mkdir $dir unless -d $dir;
+    return $dir;
+}
+        
+sub create_template_object {
+    require Template;
+    # XXX Make template caching a configurable option
+    Template->new({
+        INCLUDE_PATH => $self->path,
+        TOLERANT => 0,
+        COMPILE_DIR => $self->compile_dir,
+        COMPILE_EXT => '.ttc',
+    });
+}
 
 sub render {
     my $template = shift;
-    my $directives = {};
-    $directives = shift if ref $_[0];
 
     my $output;
-    my $t = Template->new({
-        %$directives,
-        INCLUDE_PATH => $self->path,
-        OUTPUT => \$output,
-        TOLERANT => 0,
-    });
+    my $t = $self->template_object;
     eval {
-        $t->process($template, {@_}) or die $t->error;
+        $t->process($template, {@_}, \$output) or die $t->error;
     };
     die "Template Toolkit error:\n$@" if $@;
     return $output;
 }
-
-1;
 
 __DATA__
 

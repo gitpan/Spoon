@@ -1,35 +1,16 @@
 package Spoon::Cookie;
-use strict;
-use warnings;
-use Spoon::Base '-Base';
-use CGI qw(-no_debug);
+use Spoon::Base -Base;
 
 field 'preferences';
 field 'jar' => {};
+const expires => '+5y';
+const path => '/';
+const prefix => 'Spoon-';
 
 sub init {
     $self->use_class('config');
+    $self->use_class('cgi');
     $self->fetch();
-}
-
-sub header {
-    CGI::header($self->header_values);
-}
-
-sub header_values {
-    (
-        $self->set_cookie_headers,
-        -charset => 'UTF-8',
-        $self->content_type,
-        -expires => 'now',
-        -pragma => 'no-cache',
-        -cache_control => 'no-cache',
-        -last_modified => scalar gmtime,
-    );
-}
-
-sub content_type {
-    (-type => 'text/html');
 }
 
 sub write {
@@ -52,35 +33,28 @@ sub set_cookie_headers {
     my $cookies = [];
     @$cookies = map {
 	CGI::cookie(
-            -name => $_,
+            -name => $self->prefix . $_,
             -value => Storable::freeze($jar->{$_} || {}),
-            $self->path,
-            $self->expiration,
+            -path => $self->path,
+            -expires => $self->expires,
         );
     } keys %$jar;
     return @$cookies ? (-cookie => $cookies) : ();
 }
 
-sub path {
-    ();
-}
-
-sub expiration {
-    (-expires => '+5y');
-}
-
 sub fetch {
     require Storable;
+    my $prefix = $self->prefix;
     my $jar = { 
-        map { 
+        map {
+            (my $key = $_) =~ s/^\Q$prefix\E//;
             my $object = eval { Storable::thaw(CGI::cookie($_)) };
-            $@ ? () : ($_ => $object) 
-        } CGI::cookie() 
+            $@ ? () : ($key => $object) 
+        }
+        grep { /^\Q$prefix\E/ } CGI::cookie() 
     };
     $self->jar($jar);
 }
-
-1;
 
 __END__
 

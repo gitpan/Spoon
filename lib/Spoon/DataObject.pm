@@ -1,18 +1,14 @@
 package Spoon::DataObject;
-use strict;
-use warnings;
-use Spoon::Base '-base';
+use Spoon::Base -Base;
 
 stub 'class_id';
 field 'id';
 
 sub name {
-    my $self->{name} = shift if @_;
+    $self->{name} = shift if @_;
     return $self->{name} if defined $self->name;
     $self->{name} = $self->uri_unescape($self->id);
 }
-
-1;
 
 __DATA__
 

@@ -15,6 +15,8 @@ lib/Spoon/ContentObject.pm
 lib/Spoon/Cookie.pm
 lib/Spoon/DataObject.pm
 lib/Spoon/Formatter.pm
+lib/Spoon/Headers.pm
+lib/Spoon/Hook.pm
 lib/Spoon/Hub.pm
 lib/Spoon/Installer.pm
 lib/Spoon/MetadataObject.pm
@@ -22,9 +24,22 @@ lib/Spoon/Plugin.pm
 lib/Spoon/Registry.pm
 lib/Spoon/Template.pm
 lib/Spoon/Template/TT2.pm
+lib/Spoon/Trace.pm
+lib/Spoon/Utils.pm
 Makefile.PL
 MANIFEST			This list of files
 META.yml
 README
 t/compile.t
+t/cycle.t
+t/data_inherit.t
+t/html_wrap.t
 t/load.t
+t/output/file1.html
+t/output/file2.html
+t/output/file3.html
+t/output/file4.html
+t/output/file5.html
+t/TestA.pm
+t/TestB.pm
+t/TestC.pm

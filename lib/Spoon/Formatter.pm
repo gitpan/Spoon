@@ -1,7 +1,5 @@
 package Spoon::Formatter;
-use strict;
-use warnings;
-use Spoon '-Base';
+use Spoon::Base -Base;
 
 const class_id  => 'formatter';
 stub 'top_class';
@@ -50,7 +48,9 @@ sub add_external_wafl {
 sub wafl_classes { () }
 
 package Spoon::Formatter::Unit;
-use base 'Spoon';
+use Spoon::Base -Base;
+use Scalar::Util qw(weaken);
+
 const formatter_id => '';
 const html_start => '';
 const html_end => '';
@@ -66,8 +66,8 @@ field start_end_offset => 0;
 field end_start_offset => 0;
 field end_offset => 0;
 field matched => '';
-field 'next_unit';
-field 'prev_unit';
+field -weak => 'next_unit';
+field -weak => 'prev_unit';
 
 sub parse {
     $self->parse_blocks;
@@ -241,7 +241,7 @@ sub contains_phrases {
 
 ################################################################################
 package Spoon::Formatter::Wafl;
-use Spoon::Base '-base';
+use Spoon::Base -base;
 const contains_phrases => [];
 
 sub bless_wafl_class {
@@ -275,6 +275,7 @@ sub match {
       $self->text =~ /(?:^\.([\w\-]+)\ *\n)((?:.*\n)*?)(?:^\.\1\ *\n|\z)/m;
     $self->set_match($2);
     $self->method($1);
+    $self->matched($2);
     $self->bless_wafl_class;
 }
 
@@ -312,8 +313,6 @@ sub wafl_error {
       $self->arguments,
       '}</span>';
 }
-
-1;
 
 __END__
 

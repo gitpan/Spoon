@@ -1,36 +1,79 @@
 package Spoon::Base;
-use strict;
-use warnings;
-use IO::All 0.31 ();
-use Spiffy 0.20 qw(-Base);
-# use Spiffy qw(-XXX -yaml);
-our @EXPORT = qw(io);
-
-sub io() { IO::All->new(@_) }
+use Spiffy 0.21 -Base;
+use Spiffy qw(-XXX -yaml);
+# WWW - Creating a wrapper sub to require() IO::All caused spurious segfaults
+use IO::All 0.32;
+our @EXPORT = qw(io hook trace);
+our @EXPORT_OK = qw(conf);
 
 sub init { }
 sub pre_process { }
 sub post_process { }
 
-field 'hub';
 field 'used_classes' => [];
 field 'encoding';
+field hub => -weak;
+const plugin_base_directory => './plugin';
+
+sub assert {
+    die "Assertion failed" unless shift;
+}
+
+sub hook() {
+    require Spoon::Hook;
+    no warnings;
+    *hook = sub {
+        Spoon::Hook->hook(@_);
+    };
+    goto &hook;
+}
+
+sub trace() {
+    require Spoon::Trace;
+    no warnings;
+    *trace = \ &Spoon::Trace::trace;
+    goto &trace;
+}
+
+sub t {
+    trace->mark;
+    return $self;
+}
+
+sub conf() {
+    my ($name, $default) = @_;
+    my $package = caller;
+    no strict 'refs';
+    *{$package . '::' . $name} = sub {
+        my $self = shift;
+        return $self->{$name}
+          if exists $self->{$name};
+        $self->{$name} = exists($self->hub->config->{$name})
+        ? $self->hub->config->{$name}
+        : $default;
+    };
+}
+
+sub clone {
+    return bless {%$self}, ref $self;
+}
 
 sub use_class {
     my ($class_id) = @_;
     Carp::confess("No hub in '$class_id' object")  
       unless $self->hub;
-    $self->hub->load_class($class_id);
+    my $object = $self->hub->load_class($class_id);
     my $package = ref($self);
     field -package => $package, $class_id;
     $self->$class_id($self->hub->$class_id);
     push @{$self->used_classes}, $class_id;
+    return $object;
 }       
         
 sub use_cgi {
     my $class = shift
       or die "use_cgi requires a class name";
-    eval qq{require $class};
+    eval qq{require $class} unless $class->can('new');
     my $package = ref($self);
     field -package => $package, 'cgi';
     my $object = $class->new(hub => $self->hub);
@@ -42,30 +85,47 @@ sub is_in_cgi {
     defined $ENV{GATEWAY_INTERFACE};
 }
 
+sub is_in_test {
+    defined $ENV{SPOON_TEST};
+}
+
 sub have_plugin {
     my $hub = $self->class_id eq 'hub'
     ? $self
     : $self->hub;
+    local $@;
     eval { $hub->load_class(shift) }
 }
     
-our ($UPPER, $LOWER, $ALPHANUM, $WORD, $WIKIWORD);
-our @EXPORT_OK = qw($UPPER $LOWER $ALPHANUM $WORD $WIKIWORD);
-our %EXPORT_TAGS = 
-  (char_classes => [qw($UPPER $LOWER $ALPHANUM $WORD $WIKIWORD)]);
+sub plugin_directory {
+    my $dir = join '/',
+        $self->plugin_base_directory,
+        $self->class_id,
+    ;
+    mkdir $dir unless -d $dir;
+    return $dir;
+}
+    
+our ($UPPER, $LOWER, $ALPHA, $NUM, $ALPHANUM, $WORD, $WIKIWORD);
+push @EXPORT_OK, qw($UPPER $LOWER $ALPHA $NUM $ALPHANUM $WORD $WIKIWORD);
+our %EXPORT_TAGS = (char_classes => [@EXPORT_OK]);
 if ($] < 5.008) {
-    $UPPER    = "A-Z\xc0-\xde";
-    $LOWER    = "a-z\xdf-\xff";
-    $ALPHANUM = "A-Za-z0-9\xc0-\xff";
-    $WORD     = "A-Za-z0-9\xc0-\xff_";
+    $UPPER    = 'A-Z\xc0-\xde';
+    $LOWER    = 'a-z\xdf-\xff';
+    $ALPHA    = $UPPER . $LOWER;
+    $NUM      = '0-9';
+    $ALPHANUM = $ALPHA . $NUM;
+    $WORD     = $ALPHANUM . '_';
     $WIKIWORD = $WORD;
 }
 else {
     $UPPER    = '\p{UppercaseLetter}';
     $LOWER    = '\p{LowercaseLetter}';
+    $ALPHA    = '\p{Letter}';
+    $NUM      = '\p{Number}';
     $ALPHANUM = '\p{Letter}\p{Number}\pM';
     $WORD     = '\p{Letter}\p{Number}\p{ConnectorPunctuation}\pM';
-    $WIKIWORD = "$UPPER$LOWER\\p{Number}\\p{ConnectorPunctuation}\\pM";
+    $WIKIWORD = "$UPPER$LOWER$NUM" . '\p{ConnectorPunctuation}\pM';
 }
 
 sub cleanup {
@@ -98,15 +158,10 @@ sub use_utf8 {
     $use_utf8 = $] < 5.008 ? 0 : 1;
 }
 
-# sub loc {
-#     my $i18n_class = $self->hub->config->i18n_class or die;
-#     eval "use $i18n_class; 1" or return $_[0];
-#     $i18n_class->initialize($self->use_utf8 || 0);
-#     return $i18n_class->loc(@_);
-# }
-
 sub utf8_decode {
-    utf8::decode($_[0]) if $self->use_utf8 and defined $_[0];
+    require Encode;
+    utf8::decode($_[0]) if $self->use_utf8 and defined $_[0] and
+                           not Encode::is_utf8($_[0]);
     return $_[0] if defined wantarray;
 }
 
@@ -154,18 +209,6 @@ sub base64_decode {
     require MIME::Base64;
     MIME::Base64::decode_base64(@_);
 }
-
-sub call_hooks {
-    my @params = @_ ? splice(@_, 1) : ();
-    my $hooks = $self->hub->registry->lookup
-                     ->{join('_', $self->class_id, 'hook', @_)} or return;
-    for my $method (sort keys %$hooks) {
-        my $class_id = $hooks->{$method}[0];
-        $self->hub->load_class($class_id)->$method($self, @params);
-    }
-}
-
-1;
 
 __END__
 

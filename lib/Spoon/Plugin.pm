@@ -1,9 +1,9 @@
 package Spoon::Plugin;
-use strict;
-use warnings;
-use Spoon::Base '-Base';
+use Spoon::Base -Base;
 
-const plugin_base_directory => './plugin';
+sub load_class {
+    $self->hub->load_class(@_);
+}
 
 sub class_id {
     my $package = ref $self;
@@ -16,17 +16,6 @@ sub register {
       if $self->can('process');
     return $self;
 }
-
-sub plugin_directory {
-    my $dir = join '/',
-        $self->plugin_base_directory,
-        $self->class_id,
-    ;
-    mkdir $dir unless -d $dir;
-    return $dir;
-}
-    
-1;
 
 __END__
 

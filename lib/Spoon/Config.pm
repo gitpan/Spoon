@@ -1,7 +1,5 @@
 package Spoon::Config;
-use strict;
-use warnings;
-use Spoon '-Base';
+use Spoon::Base -Base;
 
 const class_id => 'config';
 
@@ -21,6 +19,11 @@ sub new() {
     }
     $self->init;
     return $self;
+}
+
+sub add_field {
+    my ($field, $default) = @_;
+    field $field => $default;
 }
 
 sub add_config {
@@ -47,7 +50,7 @@ sub hash_from_file {
     my $config = shift;
     die "Invalid name for config file '$config'\n"
       unless $config =~ /\.(\w+)$/;
-    my $extension = lc($1);
+    my $extension = lc("$1"); # quotes fix 5.8.0 perl bug
     my $method = "parse_${extension}_file";
     -f $config ? $self->$method($config) : {};
 };
@@ -66,11 +69,12 @@ sub parse_yaml {
     my $hash = {};
     my $latest_key = '';
     for (split /\n/, $yaml) {
+        next if (/^#/);
         if (/^-\s*(.*)$/) {
             $hash->{$latest_key} = [] unless ref $hash->{$latest_key};
             push @{$hash->{$latest_key}}, $1;
         }
-        elsif (/(.*?)\s*:\s+(.*?)\s*$/ or /(.*?):\s*()$/) {
+        elsif (/(.*?)\s*:\s+(.*?)\s*$/ or /(.*?):()\s*$/) {
             $hash->{$1} = $2;
             $latest_key = $1;
         }
@@ -98,8 +102,6 @@ sub default_classes {
 }
 
 sub default_plugin_classes { () }
-
-1;
 
 __END__
 

@@ -1,7 +1,5 @@
 package Spoon::MetadataObject;
-use strict;
-use warnings;
-use Spoon::DataObject '-Base';
+use Spoon::DataObject -Base;
 
 const class_id => 'metadata';
 
@@ -20,8 +18,8 @@ sub print_yaml_file {
     }
     $yaml =~ s/\s+(?=\n)//g;
     io($file)->utf8->print($yaml);
+    return $self;
 }
-
 
 sub from_hash {
     my $hash = shift;
@@ -38,9 +36,8 @@ sub to_hash {
 }
 
 sub update {
+    return $self;
 }
-
-1;
 
 __DATA__
 

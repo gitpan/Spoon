@@ -17,10 +17,18 @@ DESCRIPTION
     need to build your own applications from it.
 
 SEE ALSO
-    Kwiki, Spork, Spiffy
+    Kwiki, Spork, Spiffy, IO::All
 
 DEDICATION
     This project is dedicated to the memory of Iain "Spoon" Truskett.
+
+CREDIT
+    Dave Rolsky and Chris Dent have made major contributions to this code
+    base. Of particular note, Dave removed the memory cycles from the hub
+    architecture, allowing safe use with mod_perl.
+
+    (Dave, Chris and myself currently work at Socialtext, where this
+    framework is heavily used.)
 
 AUTHOR
     Brian Ingerson <INGY@cpan.org>

@@ -1,11 +1,9 @@
 package Spoon::Hub;
-use strict;
-use warnings;
-use Spoon::Base '-Base';
+use Spoon::Base -Base;
 
 const class_id => 'hub';
 const action => '_default_';
-field 'main';
+field -weak => 'main';
 field 'config';
 field 'registry';
 field 'config_files' => [];
@@ -13,10 +11,16 @@ field 'loaded_objects' => [];
 field 'post_process_actions' => [];
 
 sub load_registry {
-    return if defined $self->registry;
+    return if $self->registry_loaded;
     $self->load_class('registry');
-    $self->registry->load;
+    $self->registry->load(@_);
 }
+
+sub registry_loaded {
+    defined $self->registry &&
+    defined $self->registry->lookup;
+}
+
 
 sub process {
     $self->load_registry;
@@ -73,6 +77,7 @@ sub require_class {
     my $class = $self->config->$class_id_class;
     eval "require $class";
     die $@ if $@;
+    return $class;
 }
 
 sub load_class {
@@ -97,8 +102,9 @@ sub create_class_object {
     my ($class_name, $class_id) = @_;
     Carp::confess "No class defined for class_id '$class_id'"
       unless $class_name;
-    eval "require $class_name";
+    eval "require $class_name" unless $class_name->can('new');
     die $@ if $@;
+    $self->add_hooks($class_name);
     my $object = $class_name->new(hub => $self);
     push @{$self->loaded_objects}, $object;
     $class_id ||= $object->class_id;
@@ -110,7 +116,18 @@ sub create_class_object {
     return $object;
 }
 
-1;
+sub add_hooks {
+    return unless $self->registry_loaded;
+    my $hooks = $self->registry->lookup->{hook}
+      or return;
+    for my $class_name (keys %$hooks) {
+        next unless $class_name->can('new');
+        hook(@$_) for @{$hooks->{$class_name} || []};
+        delete $hooks->{$class_name};
+    }
+    delete $self->registry->lookup->{hook}
+      if not keys %$hooks;
+}
 
 __END__
 

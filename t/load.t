@@ -6,8 +6,9 @@ use Test::More 'no_plan';
 
 ok(eval {require Spoon; 1});
 my $spoon = Spoon->new;
-ok($spoon->load_hub);
-my $hub = $spoon->hub;
+my $hub;
+ok($hub = $spoon->load_hub);
+$hub = $spoon->hub;
 ok($hub);
 ok($hub->config);
 my %config = $hub->config->all;

@@ -1,19 +1,24 @@
 package Spoon;
-use strict;
-use warnings;
-our $VERSION = '0.18';
-use Spoon::Base '-Base';
+use Spoon::Base -Base;
+our $VERSION = '0.19';
 
 const class_id => 'main';
 const config_class => 'Spoon::Config';
 field using_debug => 0;
+field 'hub';
 
 sub paired_arguments { qw(-config_class) }
 
 sub load_hub {
+    return $self->hub
+      if $self->hub;
+    $self->hub($self->new_hub(@_));
+}
+
+sub new_hub {
     my ($args, @config_files) = $self->parse_arguments(@_);
     my $config_class = $args->{-config_class} || $self->config_class;
-    eval "require $config_class";
+    eval "require $config_class"; die $@ if $@;
     my $config = $config_class->new(@config_files);
     my $hub_class = $config->hub_class;
     eval "require $hub_class";
@@ -25,14 +30,12 @@ sub load_hub {
     $hub->main($self);
     $self->hub($hub);
     $self->init;
-    no warnings;
-    $main::HUB = $hub;
     return $hub;
 }
 
 sub debug {
     no warnings;
-    if ($ENV{GATEWAY_INTERFACE}) {
+    if ($self->is_in_cgi) {
         eval q{use CGI::Carp qw(fatalsToBrowser)}; die $@ if $@;
         $SIG{__DIE__} = sub { CGI::Carp::confess(@_) }
     }
@@ -43,8 +46,6 @@ sub debug {
     $self->using_debug(1);
     return $self;
 }
-
-1;
 
 __END__
 
@@ -71,11 +72,20 @@ You need to build your own applications from it.
 
 =head1 SEE ALSO
 
-Kwiki, Spork, Spiffy
+Kwiki, Spork, Spiffy, IO::All
 
 =head1 DEDICATION
 
 This project is dedicated to the memory of Iain "Spoon" Truskett.
+
+=head1 CREDIT
+
+Dave Rolsky and Chris Dent have made major contributions to this code
+base. Of particular note, Dave removed the memory cycles from the hub
+architecture, allowing safe use with mod_perl.
+
+(Dave, Chris and myself currently work at Socialtext, where this
+framework is heavily used.)
 
 =head1 AUTHOR
 

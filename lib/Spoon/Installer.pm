@@ -1,10 +1,10 @@
 package Spoon::Installer;
-use strict;
-use warnings;
-# use Spoon::Base '-selfless', 'const';
-use Spiffy '-Base'; use IO::All; #XXX migrate to non-spiffy class
+use Spiffy -Base; 
+use IO::All; #XXX migrate to non-spiffy class
 
 const extract_to => '.';
+field quiet => 0;
+field 'hub';
 
 sub compress_from {
     $self->extract_to;
@@ -18,15 +18,16 @@ sub extract_files {
         my $file_path = join '/', $self->extract_to, $file_name;
         my $file = io->file($file_path)->assert;
         if ($locked and -f $file_path) {
-            warn "  Skipping $file (already exists)\n";
+            warn "  Skipping $file (already exists)\n" unless $self->quiet;
             next;
         }
         my $content = $self->set_file_content($file_path, $file_contents);
         if ($file->exists and $file->all eq $content) {
-            warn "  Skipping $file (unchanged)\n";
+            warn "  Skipping $file (unchanged)\n" unless $self->quiet;
             next;
         }
-        warn "  - $file\n";
+        warn "  - $file\n" unless $self->quiet;
+        $file->binary if $self->file_is_binary($file_path);
         $file->assert->print($content);
     }
 }
@@ -35,10 +36,27 @@ sub set_file_content {
     my $path = shift;
     my $content = shift;
     $content = $self->base64_decode($content)
-      if $path =~ /\.(gif|jpg|png)$/;
+      if $self->file_is_binary($path);
     $content = $self->fix_hashbang($content)
-      if $path =~ /\.(pl|cgi)$/;
+      if $self->file_is_executable($path);
+    $content = $self->wrap_html($content, $path)
+      if $self->file_is_html($path);
     return $content;
+}
+
+sub file_is_binary {
+    my $path = shift;
+    $path =~ /\.(gif|jpg|png)$/;
+}
+
+sub file_is_executable {
+    my $path = shift;
+    $path =~ /\.(pl|cgi)$/;
+}
+
+sub file_is_html {
+    my $path = shift;
+    $path =~ /\.html$/;
 }
 
 sub fix_hashbang {
@@ -48,20 +66,42 @@ sub fix_hashbang {
     return $content;
 }
 
-sub get_packed_files {
-    my @files = split /^__(.+)__\n/m, $self->data;
-    shift @files;
-    return @files;
+sub wrap_html {
+    my ($content, $path) = @_;
+    $path =~ s/^.*\/(.*)$/$1/;
+    $path =~ s/\.html$//;
+    $content = $self->strip_html($content);
+    $content = "<!-- BEGIN $path -->\n$content"
+      unless $content =~ /^\s/;
+    $content = "$content<!-- END $path -->\n"
+      unless $content =~ /\s\n\z/;
+    return $content;
 }
-        
+
+sub get_packed_files {
+    my %seen;
+    my @return;
+    for my $class (@{Spiffy::all_my_bases(ref $self)}) {
+        next if $class =~ /-/;
+        last if $class =~ /^Spoon/;
+        my $data = $self->data($class)
+          or next;
+        my @files = split /^__(.+)__\n/m, $data;
+        shift @files;
+        while (@files) {
+            my ($name, $content) = splice(@files, 0, 2);
+            next if $seen{$name}++;
+            push @return, $name, $content;
+        }
+    }
+    return @return;
+}
+
 sub data {
-    my $package = ref($self);
+    my $package = shift || ref($self);
+    local $SIG{__WARN__} = sub {};
     local $/;
-    my $data = eval "package $package; <DATA>";
-    die $@ if $@;
-    die "No DATA section found for $package."
-      unless $data;
-    return $data;
+    eval "package $package; <DATA>";
 }
 
 sub compress_files {
@@ -96,9 +136,11 @@ sub get_file_content {
     my $path = shift;
     my $content = io($path)->all;
     $content = $self->base64_encode($content)
-      if $path =~ /\.(gif|jpg|png)$/;
+      if $self->file_is_binary($path);
     $content = $self->unfix_hashbang($content)
-      if $path =~ /\.(pl|cgi)$/;
+      if $self->file_is_executable($path);
+    $content = $self->strip_html($content)
+      if $self->file_is_html($path);
     $content .= "\n"
       unless $content =~ /\n\z/;
     return $content;
@@ -107,6 +149,13 @@ sub get_file_content {
 sub unfix_hashbang {
     my $content = shift;
     $content =~ s/^#!.*\n/#!\/usr\/bin\/perl\n/;
+    return $content;
+}
+
+sub strip_html {
+    my $content = shift;
+    $content =~ s/^<!-- BEGIN .* -->\n//;
+    $content =~ s/(?<=\n)<!-- END .* -->\n\z//;
     return $content;
 }
 
@@ -123,7 +172,7 @@ sub compress_lib {
         $self->hub->config->add_config(
             +{ "${class_id}_class" => $class_name }
         );
-        warn "Compressing $class_name\n";
+        warn "Compressing $class_name\n" unless $self->quiet;
         $self->hub->load_class($class_id)->compress_files($source_dir);
     }
     grep {
@@ -139,8 +188,6 @@ sub compress_lib {
         } : ();
     } io('lib')->All_Files;
 }
-
-1;
 
 __END__
 

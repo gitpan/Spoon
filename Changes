@@ -1,4 +1,18 @@
 ---
+version: 0.32
+date:    Wed Dec 15 13:13:10 PST 2004
+changes:
+- Spoon is now memory cycle free, which makes it much more suitable for use under mod_perl
+- Added Spoon::Trace tracing and benchmarking facility
+- Added Spoon::Hook method hooking facility
+- Added assert, clone, conf functions to base
+- WARNING: Removed old hook facility!!
+- Split Spoon::Cookie into Spoon::Headers
+- Redo how redirects work. Use a redirect method.
+- -quiet mode for file installation
+- Add BEGIN/END comments to html templates automatically
+- Use template toolkit caching. Big speed improvement.
+---
 version: 0.18
 date:    Sun Aug  8 23:02:27 PDT 2004
 changes:

@@ -1,8 +1,6 @@
 package Spoon::CGI;
-use strict;
-use warnings;
-use Spoon '-Base';
-use CGI qw(-no_debug -nosticky);
+use Spoon::Base -Base;
+use CGI -no_debug, -nosticky;
 our @EXPORT = qw(cgi);
 
 my $all_params_by_class = {};
@@ -11,15 +9,25 @@ const class_id => 'cgi';
 
 sub cgi() {
     my $package = caller;
-    my ($field, @flags);
+    my ($field, $is_upload, @flags);
     for (@_) {
+        if ($_ eq '-upload') {
+            $is_upload = 1;
+            next;
+        }
         (push @flags, $1), next if /^-(\w+)$/;
         $field ||= $_;
     }
+    die "Cannot apply flags to upload field ($field)" if $is_upload and @flags;
     push @{$all_params_by_class->{$package}}, $field;
     no strict 'refs';
     no warnings;
-    *{"$package\::$field"} = @flags 
+    *{"$package\::$field"} = $is_upload
+    ? sub {
+        my $self = shift;
+        $self->_get_upload($field);
+    }
+    : @flags 
     ? sub {
         my $self = shift;
         die "Setting CGI params not implemented" if @_;
@@ -72,6 +80,12 @@ sub _get_raw {
         : ''; 
 }
 
+sub _get_upload {
+    my $handle = CGI::upload($_[0])
+      or return;
+    {handle => $handle, filename => $handle, %{CGI::uploadInfo($handle) || {}}};
+}
+
 sub _utf8_filter {
     $self->utf8_decode($_[0]);
 }
@@ -89,8 +103,6 @@ sub _newlines_filter {
           unless $_[0] =~ /\n\z/;
     }
 }
-
-1;
 
 __END__
 

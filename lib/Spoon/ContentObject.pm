@@ -1,10 +1,16 @@
 package Spoon::ContentObject;
-use strict;
-use warnings;
-use Spoon::DataObject '-Base';
+use Spoon::DataObject -Base;
 
 stub 'content';
 stub 'metadata';
+
+sub force {
+    if (@_) {
+        $self->{force} = shift;
+        return $self;
+    }
+    $self->{force} ||= 0;
+}
 
 sub database_directory {
     join '/', $self->hub->config->database_directory, $self->class_id; 
@@ -50,6 +56,7 @@ sub load_metadata {
 sub store {
     $self->store_content or return;
     $self->store_metadata;
+    return if $self->force;
     return $self;
 }
 
@@ -60,8 +67,10 @@ sub store_content {
         $content =~ s/\n*\z/\n/;
     }
     my $file = io->file($self->file_path)->utf8;
-    return if $file->exists and 
-              $content eq $file->all;
+    unless ($self->force) {
+        return if $file->exists and 
+                  $content eq $file->all;
+    }
     $file->print($content);
     return $self;
 }
@@ -72,8 +81,6 @@ sub store_metadata {
     $metadata->store;
     return $self;
 }
-
-1;
 
 __DATA__
 
