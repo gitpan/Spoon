@@ -1,0 +1,35 @@
+NAME
+    Spoon - Spoon Passed Over Our Network
+
+SYNOPSIS
+        Out of the Cutlery Drawer
+        And onto the Dinner Table
+
+DESCRIPTION
+    Spoon is an Application Framework that is designed primarily for
+    building Social Software web applications. The Kwiki wiki software is
+    built on top of Spoon.
+
+    Spoon.pm is the primary base class for all the Spoon::* modules.
+    Spoon.pm inherits from Spiffy.pm.
+
+    Spoon is not an application in and of itself. (As compared to Kwiki) You
+    need to build your own applications from it.
+
+SEE ALSO
+    Kwiki, Spiffy
+
+DEDICATION
+    This project is dedicated to the memory of Iain "Spoon" Truskett.
+
+AUTHOR
+    Brian Ingerson <INGY@cpan.org>
+
+COPYRIGHT
+    Copyright (c) 2004. Brian Ingerson. All rights reserved.
+
+    This program is free software; you can redistribute it and/or modify it
+    under the same terms as Perl itself.
+
+    See http://www.perl.com/perl/misc/Artistic.html
+
