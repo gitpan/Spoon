@@ -5,18 +5,15 @@ use Spoon '-Base';
 
 const class_id => 'registry';
 const registry_file => 'registry.dd';
+const registry_directory => '.';
 field 'lookup';
 
 sub init {
     $self->use_class('config');
 }
 
-sub plugin_directory {
-    './plugin';
-}
-
 sub registry_path {
-    join '/', $self->plugin_directory, $self->registry_file; 
+    join '/', $self->registry_directory, $self->registry_file; 
 }
 
 sub load {
@@ -54,12 +51,7 @@ sub update {
 sub add {
     my $key = shift;
     my $value = shift;
-    if (defined $value) {
-        $self->lookup->{$key}{$value} = [ caller()->class_id, @_ ];
-    }
-    else {
-        push @{$self->lookup->{$key}}, caller()->class_id;
-    }
+    $self->lookup->{$key}{$value} = [ caller()->class_id, @_ ];
 }
 
 sub write {
@@ -82,9 +74,11 @@ package Spoon::Lookup;
 use strict;
 use Spiffy 0.15 '-base';
 
-field 'classes';
-field 'action';
-field 'has_preferences';
+field 'classes' => {};
+field 'action' => {};
+field 'preference' => {};
+field 'wafl' => {};
+field 'preload' => {};
 
 1;
 

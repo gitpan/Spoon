@@ -5,7 +5,7 @@ use Spoon::Base '-Base';
 use CGI qw(-no_debug);
 
 field 'preferences';
-field 'cookie_jar' => {};
+field 'jar' => {};
 
 sub init {
     $self->use_class('config');
@@ -19,7 +19,7 @@ sub header {
 sub header_values {
     (
         $self->set_cookie_headers,
-        -charset => $self->config->encoding,
+        -charset => $self->config->character_encoding,
         $self->content_type,
         -expires => 'now',
         -pragma => 'no-cache',
@@ -35,29 +35,29 @@ sub content_type {
 sub write {
     my ($cookie_name, $hash) = @_;
     require Storable;
-    $self->cookie_jar->{$cookie_name} = $hash;
+    $self->jar->{$cookie_name} = $hash;
 }
 
 sub read {
     my $cookie_name = shift;
-    my $cookie_jar = $self->cookie_jar;
-    my $cookie = $cookie_jar->{$cookie_name};
+    my $jar = $self->jar;
+    my $cookie = $jar->{$cookie_name};
     $cookie ||= {};
     return $cookie;
 }
 
 sub set_cookie_headers {
-    my $cookie_jar = $self->cookie_jar;
-    return () unless keys %$cookie_jar;
+    my $jar = $self->jar;
+    return () unless keys %$jar;
     my $cookies = [];
     @$cookies = map {
 	CGI::cookie(
             -name => $_,
-            -value => Storable::freeze($cookie_jar->{$_}),
+            -value => Storable::freeze($jar->{$_} || {}),
             $self->path,
             $self->expiration,
         );
-    } keys %$cookie_jar;
+    } keys %$jar;
     return @$cookies ? (-cookie => $cookies) : ();
 }
 
@@ -71,13 +71,13 @@ sub expiration {
 
 sub fetch {
     require Storable;
-    my $cookie_jar = { 
+    my $jar = { 
         map { 
             my $object = eval { Storable::thaw(CGI::cookie($_)) };
             $@ ? () : ($_ => $object) 
         } CGI::cookie() 
     };
-    $self->cookie_jar($cookie_jar);
+    $self->jar($jar);
 }
 
 1;

@@ -8,8 +8,9 @@ version_from('lib/Spoon.pm');
 
 requires(qw(
     perl 5.6.1
-    Spiffy 0.16
-    IO::All 0.21
+    Spiffy 0.18
+    IO::All 0.22
+    Template 2.0
 ));
 
 &WriteAll();

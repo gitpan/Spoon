@@ -34,8 +34,20 @@ sub create_wafl_table {
         my $class = /::/ ? $_ : "$class_prefix$_";
         $class->can('wafl_id') ? ($class->wafl_id, $class) : ();
     } $self->wafl_classes;
+    $self->add_external_wafl(\ %table);
     \ %table;
 }
+
+sub add_external_wafl {
+    return unless defined $self->hub->registry;
+    my $table = shift;
+    my $map = $self->hub->registry->lookup->wafl;
+    for my $wafl_id (keys %$map) {
+        $table->{$wafl_id} = $map->{$wafl_id};
+    }
+}
+
+sub wafl_classes { () }
 
 package Spoon::Formatter::Unit;
 use base 'Spoon';
@@ -211,7 +223,7 @@ sub html {
 
 sub text_filter { shift }
 
-sub escape_html { CGI::escapeHTML(shift) }
+sub escape_html { $self->html_escape(shift) }
 
 ################################################################################
 package Spoon::Formatter::Container;
@@ -236,7 +248,26 @@ sub contains_phrases {
 }
 
 ################################################################################
+package Spoon::Formatter::Wafl;
+use Spoon::Base '-base';
+const contains_phrases => [];
+
+sub bless_wafl_class {
+    my $package = caller;
+    my $class = $self->hub->formatter->wafl_table->{$self->method};
+    if (ref $class) {
+        my $class_id;
+        ($class_id, $class) = @$class;
+        $self->hub->load_class($class_id);
+    }
+    bless $self, $class
+      if defined $class and $class->isa($package);
+    return 1;
+}
+
+################################################################################
 package Spoon::Formatter::WaflBlock;
+use base 'Spoon::Formatter::Wafl';
 use base 'Spoon::Formatter::Block';
 const formatter_id => 'wafl_block';
 const html_end => "</div>\n";
@@ -252,14 +283,16 @@ sub match {
       $self->text =~ /(?:^\.([\w\-]+)\ *\n)((?:.*\n)*?)(?:^\.\1\ *\n|\z)/m;
     $self->set_match($2);
     $self->method($1);
-    my $class = $self->hub->formatter->wafl_table->{$self->method};
-    bless $self, $class
-      if defined $class and $class->isa(__PACKAGE__);
-    return 1;
+    $self->bless_wafl_class;
+}
+
+sub block_text {
+    $self->units->[0];
 }
 
 ################################################################################
 package Spoon::Formatter::WaflPhrase;
+use base 'Spoon::Formatter::Wafl';
 use base 'Spoon::Formatter::Unit';
 const formatter_id => 'wafl_phrase';
 const pattern_start =>
@@ -276,10 +309,16 @@ sub match_phrase {
     return unless $self->matched =~ /^\{([\w\-]+)(?:\s*\:)?\s*(.*)\}$/;
     $self->arguments($2);
     $self->method($1);
-    my $class = $self->hub->formatter->wafl_table->{$self->method};
-    bless $self, $class
-      if defined $class and $class->isa(__PACKAGE__);
-    return 1;
+    $self->bless_wafl_class;
+}
+
+sub wafl_error {
+    join '',
+      '<span class="wafl_error">{',
+      $self->method,
+      ': ',
+      $self->arguments,
+      '}</span>';
 }
 
 1;

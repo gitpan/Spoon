@@ -1,8 +1,7 @@
 package Spoon;
 use strict;
 use warnings;
-our $VERSION = '0.14';
-use Spiffy 0.16 ();
+our $VERSION = '0.15';
 use Spoon::Base '-Base';
 
 const class_id => 'main';
@@ -51,7 +50,7 @@ __END__
 
 =head1 NAME
 
-Spoon - Spoon Passed Over Our Network
+Spoon - A Spiffy Application Building Framework
 
 =head1 SYNOPSIS
 
@@ -64,7 +63,7 @@ Spoon is an Application Framework that is designed primarily for
 building Social Software web applications. The Kwiki wiki software is
 built on top of Spoon.
 
-Spoon.pm is the primary base class for all the Spoon::* modules.
+Spoon::Base is the primary base class for all the Spoon::* modules.
 Spoon.pm inherits from Spiffy.pm.
 
 Spoon is not an application in and of itself. (As compared to Kwiki)

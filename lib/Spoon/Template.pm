@@ -5,21 +5,32 @@ use Spoon '-Base';
 use Template;
 
 const class_id => 'template';
-const default_include_path => [ './template' ];
-field include_path => [];
+const default_path => [ './template' ];
+field path => [];
 stub 'render';
 
 sub init {
     $self->use_class('config');
     $self->use_class('cgi')
-      if $ENV{GATEWAY_INTERFACE};
+      if $self->is_in_cgi;
+    $self->add_path(@{$self->default_path});
 }
 
 sub all {
     return ( 
         $self->config->all,
-        $ENV{GATEWAY_INTERFACE} ? ($self->cgi->all) : (),
+        $self->is_in_cgi ? ($self->cgi->all) : (),
+        hub => $self->hub,
     );
+}
+
+sub add_path {
+    splice @{$self->path}, 0, 0, @_;
+}
+
+sub remove_path {
+    my $path = shift;
+    $self->path([grep {$_ ne $path} @{$self->path}]);
 }
 
 sub process {
@@ -42,11 +53,6 @@ sub process {
     return join '', map {
         $self->render($_, $directives, @vars)
     } @templates;
-}
-
-sub get_include_path {
-    my $include_path = $self->include_path;
-    @$include_path ? $include_path : $self->default_include_path;
 }
 
 1;

@@ -3,6 +3,8 @@ use strict;
 use warnings;
 use Spoon::Base '-Base';
 
+const plugin_base_directory => './plugin';
+
 sub class_id {
     my $package = ref $self;
     $package =~ s/.*:://;
@@ -17,7 +19,7 @@ sub register {
 
 sub plugin_directory {
     my $dir = join '/',
-        $self->hub->registry->plugin_directory,
+        $self->plugin_base_directory,
         $self->class_id,
     ;
     mkdir $dir unless -d $dir;

@@ -1,5 +1,5 @@
 NAME
-    Spoon - Spoon Passed Over Our Network
+    Spoon - A Spiffy Application Building Framework
 
 SYNOPSIS
         Out of the Cutlery Drawer
@@ -10,7 +10,7 @@ DESCRIPTION
     building Social Software web applications. The Kwiki wiki software is
     built on top of Spoon.
 
-    Spoon.pm is the primary base class for all the Spoon::* modules.
+    Spoon::Base is the primary base class for all the Spoon::* modules.
     Spoon.pm inherits from Spiffy.pm.
 
     Spoon is not an application in and of itself. (As compared to Kwiki) You

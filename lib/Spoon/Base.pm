@@ -1,11 +1,15 @@
 package Spoon::Base;
 use strict;
 use warnings;
-use Spiffy 0.16 '-Base';
-use IO::All 0.21 ();
+use IO::All 0.22 ();
+use Spiffy 0.18 '-Base';
 our @EXPORT = qw(io);
 
 sub io() { IO::All->new(@_) }
+
+sub init { }
+sub pre_process { }
+sub post_process { }
 
 field 'hub';
 field 'used_classes' => [];
@@ -15,17 +19,6 @@ sub new() {
     my $self = $class->SUPER::new;
     $self->hub(shift);
     return $self;
-}
-
-sub use_cgi {
-    my $class = shift
-      or die "use_cgi requires a class name";
-    eval qq{require $class};
-    my $package = ref($self);
-    field -package => $package, 'cgi';
-    my $object = $class->new($self->hub);
-    $object->init;
-    $self->cgi($object);
 }
 
 sub use_class {
@@ -38,14 +31,28 @@ sub use_class {
     push @{$self->used_classes}, $class_id;
 }       
         
+sub use_cgi {
+    my $class = shift
+      or die "use_cgi requires a class name";
+    eval qq{require $class};
+    my $package = ref($self);
+    field -package => $package, 'cgi';
+    my $object = $class->new($self->hub);
+    $object->init;
+    $self->cgi($object);
+}
+
 sub is_in_cgi {
     defined $ENV{GATEWAY_INTERFACE};
 }
 
-sub init { }
-sub pre_process { }
-sub post_process { }
-
+sub have_plugin {
+    my $hub = $self->class_id eq 'hub'
+    ? $self
+    : $self->hub;
+    eval { $hub->load_class(shift) }
+}
+    
 our ($UPPER, $LOWER, $ALPHANUM, $WORD, $WIKIWORD);
 our @EXPORT_OK = qw($UPPER $LOWER $ALPHANUM $WORD $WIKIWORD);
 our %EXPORT_TAGS = 
@@ -88,15 +95,16 @@ sub dumper_to_file {
 }
 
 # i18n stuff
-my $use_utf8;
 field 'encoding';
 
+my $use_utf8;
 sub use_utf8 {
     $use_utf8 = shift if @_;
     return $use_utf8 if defined($use_utf8);
     return($use_utf8 = 0) if $] < 5.008;
     return 1 unless $self->hub->config;
-    return($use_utf8 = (lc($self->hub->config->encoding) =~ /^utf-?8$/));
+    return
+      ($use_utf8 = (lc($self->hub->config->character_encoding) =~ /^utf-?8$/));
 }
 
 sub loc {
@@ -127,6 +135,24 @@ sub uri_unescape {
     $data = CGI::Util::unescape($data);
     $self->utf8_decode($data);
     return $data;
+}
+
+sub html_escape { 
+    CGI::escapeHTML(shift);
+}
+
+sub html_unescape { 
+    CGI::unescapeHTML(shift);
+}
+
+sub base64_encode {
+    require MIME::Base64;
+    MIME::Base64::encode_base64(@_);
+}
+
+sub base64_decode {
+    require MIME::Base64;
+    MIME::Base64::decode_base64(@_);
 }
 
 1;

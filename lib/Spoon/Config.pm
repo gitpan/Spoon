@@ -26,13 +26,7 @@ sub add_config {
     my $config = shift;
     my $hash = ref $config
     ? $config
-    : do {
-        die "Invalid name for config file '$config'\n"
-          unless $config =~ /\.(\w+)$/;
-        my $extension = lc($1);
-        my $method = "parse_$extension\_file";
-        -f $config ? $self->$method($config) : {};
-    };
+    : $self->hash_from_file($config);
     for my $key (keys %$hash) {
         field $key;
         $self->{$key} = $hash->{$key};
@@ -43,17 +37,22 @@ sub add_config {
     }
 }
 
+sub hash_from_file {
+    my $config = shift;
+    die "Invalid name for config file '$config'\n"
+      unless $config =~ /\.(\w+)$/;
+    my $extension = lc($1);
+    my $method = "parse_$extension\_file";
+    -f $config ? $self->$method($config) : {};
+};
+
 sub parse_file {
     $self->parse_yaml_file(@_);
 }
 
 sub parse_yaml_file {
     my $file = shift;
-    open CONFIG, $file
-      or die "Can't open $file for input:\n$!";
-    my $yaml = do {local $/; <CONFIG>};
-    close CONFIG;
-    $self->parse_yaml($yaml);
+    $self->parse_yaml(io($file)->scalar);
 }
 
 sub parse_yaml {

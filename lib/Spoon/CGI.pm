@@ -78,8 +78,12 @@ sub _trim_filter {
 }
 
 sub _newlines_filter {
-    $_[0] =~ s/\015\012/\n/g;
-    $_[0] =~ s/\015/\n/g;
+    if (length $_[0]) {
+        $_[0] =~ s/\015\012/\n/g;
+        $_[0] =~ s/\015/\n/g;
+        $_[0] .= "\n"
+          unless $_[0] =~ /\n\z/;
+    }
 }
 
 1;
