@@ -15,8 +15,9 @@ sub new() {
     my $class = shift;
     my $self = bless {}, $class;
     my (@configs) = @_ ? @_ : $self->default_configs;
-    for my $config ($self->default_config, @configs) {
-        $self->add_config($config);
+    $self->add_config($self->default_config, 1);
+    for my $config (@configs) {
+        $self->rebless($self->add_config($config));
     }
     $self->init;
     return $self;
@@ -31,6 +32,11 @@ sub add_config {
         field $key;
         $self->{$key} = $hash->{$key};
     }
+    return $hash;
+}
+
+sub rebless {
+    my $hash = shift;
     if (defined (my $config_class = $hash->{config_class})) {
         eval qq{ require $config_class }; die $@ if $@;
         bless $self, $config_class;
@@ -42,7 +48,7 @@ sub hash_from_file {
     die "Invalid name for config file '$config'\n"
       unless $config =~ /\.(\w+)$/;
     my $extension = lc($1);
-    my $method = "parse_$extension\_file";
+    my $method = "parse_${extension}_file";
     -f $config ? $self->$method($config) : {};
 };
 
@@ -52,7 +58,7 @@ sub parse_file {
 
 sub parse_yaml_file {
     my $file = shift;
-    $self->parse_yaml(io($file)->all);
+    $self->parse_yaml(io($file)->utf8->all);
 }
 
 sub parse_yaml {

@@ -1,8 +1,9 @@
 package Spoon::Base;
 use strict;
 use warnings;
-use IO::All 0.30 ();
-use Spiffy 0.19 '-Base';
+use IO::All 0.31 ();
+use Spiffy 0.20 qw(-Base);
+# use Spiffy qw(-XXX -yaml);
 our @EXPORT = qw(io);
 
 sub io() { IO::All->new(@_) }
@@ -15,16 +16,10 @@ field 'hub';
 field 'used_classes' => [];
 field 'encoding';
 
-sub new() {
-    my $class = shift;
-    my $self = $class->SUPER::new;
-    $self->hub(shift);
-    return $self;
-}
-
 sub use_class {
     my ($class_id) = @_;
-    Carp::confess()  unless $self->hub;
+    Carp::confess("No hub in '$class_id' object")  
+      unless $self->hub;
     $self->hub->load_class($class_id);
     my $package = ref($self);
     field -package => $package, $class_id;
@@ -38,7 +33,7 @@ sub use_cgi {
     eval qq{require $class};
     my $package = ref($self);
     field -package => $package, 'cgi';
-    my $object = $class->new($self->hub);
+    my $object = $class->new(hub => $self->hub);
     $object->init;
     $self->cgi($object);
 }
@@ -92,7 +87,7 @@ sub dumper_to_file {
     local $Data::Dumper::Indent = 1;
     local $Data::Dumper::Terse = (@_ == 1) ? 1 : 0;
     local $Data::Dumper::Sortkeys = 1;
-    io($path)->assert->print(Data::Dumper::Dumper(@_));
+    io("$path")->assert->print(Data::Dumper::Dumper(@_));
 }
 
 # Codecs and Escaping
@@ -158,6 +153,16 @@ sub base64_encode {
 sub base64_decode {
     require MIME::Base64;
     MIME::Base64::decode_base64(@_);
+}
+
+sub call_hooks {
+    my @params = @_ ? splice(@_, 1) : ();
+    my $hooks = $self->hub->registry->lookup
+                     ->{join('_', $self->class_id, 'hook', @_)} or return;
+    for my $method (sort keys %$hooks) {
+        my $class_id = $hooks->{$method}[0];
+        $self->hub->load_class($class_id)->$method($self, @params);
+    }
 }
 
 1;

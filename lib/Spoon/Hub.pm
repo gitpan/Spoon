@@ -99,7 +99,7 @@ sub create_class_object {
       unless $class_name;
     eval "require $class_name";
     die $@ if $@;
-    my $object = $class_name->new($self);
+    my $object = $class_name->new(hub => $self);
     push @{$self->loaded_objects}, $object;
     $class_id ||= $object->class_id;
     die "No class_id defined for class: '$class_name'\n"

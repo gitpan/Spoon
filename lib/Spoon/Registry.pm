@@ -16,7 +16,8 @@ sub registry_path {
 }
 
 sub load {
-    return 1 if defined $self->lookup;
+    return 1 if defined $self->lookup and
+                ref $self->lookup eq $self->lookup_class;
     my $path = $self->registry_path;
     my $lookup = eval ${io $path}; die "$@" if $@;
     die "$path seems to be corrupt:\n$@" if $@;
@@ -29,11 +30,15 @@ sub update {
     $self->lookup($lookup);
     for my $class_name (@{$self->hub->config->plugin_classes}) {
         eval "require $class_name"; die $@ if $@;
-        my $object = $class_name->new($self->hub);
+        my $object = $class_name->new(hub => $self->hub);
         my $class_id = $object->class_id
           or die "No class_id for $class_name\n";
         $self->current_class_id($class_id);
         $lookup->{classes}{$class_id} = $class_name;
+        push @{$lookup->{plugins}}, {
+            id => $class_id,
+            title => $object->class_title,
+        };
         $object->register($self);
     }
     $self->write;
@@ -44,7 +49,9 @@ sub update {
 sub add {
     my $key = shift;
     my $value = shift;
-    $self->lookup->{$key}{$value} = [ $self->current_class_id, @_ ];
+    my $class_id = $self->current_class_id;
+    $self->lookup->{$key}{$value} = [ $class_id, @_ ];
+    push @{$self->lookup->{add_order}{$class_id}{$key}}, $value;
 }
 
 sub write {
@@ -53,13 +60,15 @@ sub write {
 
 package Spoon::Lookup;
 use strict;
-use Spiffy 0.15 '-base';
+use Spiffy 0.20 '-base';
 
-field 'classes' => {};
-field 'action' => {};
-field 'preference' => {};
-field 'wafl' => {};
-field 'preload' => {};
+field action => {};
+field add_order => {};
+field classes => {};
+field plugins => [];
+field preference => {};
+field preload => {};
+field wafl => {};
 
 1;
 

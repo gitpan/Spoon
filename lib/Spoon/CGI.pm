@@ -25,7 +25,7 @@ sub cgi() {
         die "Setting CGI params not implemented" if @_;
         my $param = $self->_get_raw($field);
         for my $flag (@flags) {
-            my $method = "_$flag\_filter";
+            my $method = "_${flag}_filter";
             $self->$method($param);
         }
         return $param;
@@ -53,7 +53,7 @@ sub all {
 }
 
 sub vars {
-    CGI::Vars();
+    map $self->utf8_decode($_), CGI::Vars();
 }
 
 sub _get_raw {

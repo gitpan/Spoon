@@ -19,14 +19,14 @@ sub print_yaml_file {
         $yaml .= "$key: $value\n";
     }
     $yaml =~ s/\s+(?=\n)//g;
-    io($file)->print($yaml);
+    io($file)->utf8->print($yaml);
 }
 
 
 sub from_hash {
     my $hash = shift;
-    $self->$_($hash->{$_})
-      for keys %$hash;
+    exists $hash->{$_} and $self->$_($hash->{$_})
+      for $self->sort_order;
     return $self;
 }
 

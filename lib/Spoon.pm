@@ -1,7 +1,7 @@
 package Spoon;
 use strict;
 use warnings;
-our $VERSION = '0.17';
+our $VERSION = '0.18';
 use Spoon::Base '-Base';
 
 const class_id => 'main';
@@ -34,11 +34,11 @@ sub debug {
     no warnings;
     if ($ENV{GATEWAY_INTERFACE}) {
         eval q{use CGI::Carp qw(fatalsToBrowser)}; die $@ if $@;
-        *CORE::GLOBAL::die = sub { goto &CGI::Carp::confess };
+        $SIG{__DIE__} = sub { CGI::Carp::confess(@_) }
     }
     else {
         require Carp;
-        *CORE::GLOBAL::die = sub { goto &Carp::confess };
+        $SIG{__DIE__} = sub { Carp::confess(@_) }
     }
     $self->using_debug(1);
     return $self;

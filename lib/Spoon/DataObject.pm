@@ -12,14 +12,6 @@ sub name {
     $self->{name} = $self->uri_unescape($self->id);
 }
 
-sub new {
-    my $class = shift;
-    my $self = bless {}, $class;
-    $self->hub(shift);
-    $self->id(shift);
-    return $self;
-}   
-
 1;
 
 __DATA__

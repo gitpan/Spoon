@@ -1,13 +1,13 @@
 name: Spoon
-version: 0.17
+version: 0.18
 abstract: Out of the Cutlery Drawer
 author: Brian Ingerson <ingy@cpan.org>
 license: perl
 distribution_type: module
 requires:
   perl: 5.6.1
-  Spiffy: 0.19
-  IO::All: 0.30
+  Spiffy: 0.20
+  IO::All: 0.31
   Template: 2.0
 no_index:
   directory:

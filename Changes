@@ -1,4 +1,10 @@
 ---
+version: 0.18
+date:    Sun Aug  8 23:02:27 PDT 2004
+changes:
+- Use Spiffy::new for constructor instead of special Spoon::Base one.
+- unicode fixes
+---
 version: 0.17
 date:    Fri Jul 16 23:42:53 PDT 2004
 changes:

@@ -12,7 +12,7 @@ sub text_to_html {
 }
 
 sub text_to_parsed {
-    $self->top_class->new($self->hub, shift)->parse;
+    $self->top_class->new(hub => $self->hub, text => shift)->parse;
 }
 
 sub table { $self->{table} ||= $self->create_table }
@@ -69,14 +69,6 @@ field matched => '';
 field 'next_unit';
 field 'prev_unit';
 
-sub new() {
-    my $class = shift;
-    my $self = bless {}, $class;
-    $self->hub(shift);
-    $self->text(shift);
-    return $self;
-}
-
 sub parse {
     $self->parse_blocks;
     my $units = $self->units;
@@ -101,7 +93,7 @@ sub parse_blocks {
         for my $format_id (@$contains) {
             my $class = $table->{$format_id}
               or die "No class for $format_id";
-            my $unit = $class->new($self->hub);
+            my $unit = $class->new(hub => $self->hub);
             $unit->text($text);
             $unit->match or next;
             $match = $unit
@@ -142,7 +134,7 @@ sub parse_phrases {
         for my $format_id (@$contains) {
             my $class = $table->{$format_id}
               or die "No class for $format_id";
-            my $unit = $class->new($self->hub);
+            my $unit = $class->new(hub => $self->hub);
             $unit->text($text);
             $unit->match_phrase or next;
             $match = $unit

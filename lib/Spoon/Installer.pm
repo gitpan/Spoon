@@ -133,9 +133,10 @@ sub compress_lib {
           and $name !~ /::(Installer)$/;
     } map {
         my $name = $_->name;
-        $name =~ s/^lib\/(.*)\.pm$/$1/;
-        $name =~ s/\//::/g;
-        $name;
+        ($name =~ s/^lib\/(.*)\.pm$/$1/) ? do {
+            $name =~ s/\//::/g;
+            $name;
+        } : ();
     } io('lib')->All_Files;
 }
 
