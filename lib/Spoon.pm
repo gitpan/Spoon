@@ -1,8 +1,8 @@
 package Spoon;
 use strict;
 use warnings;
-use Spiffy '-base';
-our $VERSION = '0.11';
+use Spiffy 0.15 '-base';
+our $VERSION = '0.12';
 
 field const class_id => 'main';
 field const config_class => 'Spoon::Config';
@@ -43,6 +43,7 @@ sub use_class {
 }       
         
 sub init { }
+sub post_process { }
 
 my $global_die;
 sub debug {

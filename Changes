@@ -1,4 +1,9 @@
 ---
+version: 0.12
+date:    Wed Mar 31 00:16:13 CST 2004
+changes:
+- Refactoring for Spork-0.12
+---
 version: 0.11
 date:    Sun Mar 21 12:45:18 PST 2004
 changes:

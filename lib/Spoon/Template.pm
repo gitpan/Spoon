@@ -7,6 +7,7 @@ use Template;
 field const class_id => 'template';
 field const default_include_path => [ './template' ];
 field include_path => [];
+field stub 'render';
 
 sub init {
     my $self = shift;
@@ -46,37 +47,10 @@ sub process {
     } @templates;
 }
 
-sub render {
-    my $self = shift;
-    my $template = shift;
-    my $directives = {};
-    $directives = shift if ref $_[0];
-
-    my $include_path = $self->get_include_path;
-    my $output;
-    my $t = Template->new({
-        %$directives,
-        INCLUDE_PATH => $include_path,
-        PLUGINS => $self->plugins,
-        OUTPUT => \$output,
-        TOLERANT => 0,
-    });
-    eval {
-        $t->process($template, {@_}) or die $t->error;
-    };
-    die "Template Toolkit error: $@" if $@;
-    return $output;
-}
-
 sub get_include_path {
     my $self = shift;
     my $include_path = $self->include_path;
     @$include_path ? $include_path : $self->default_include_path;
-}
-
-sub plugins {
-    my $self = shift;
-    $self->hub->registry->template_lookup;
 }
 
 1;

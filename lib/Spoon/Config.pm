@@ -10,32 +10,39 @@ sub all {
     return %$self;
 }
 
+sub default_configs { () }
+
 sub new {
     my $class = shift;
-    my (@configs) = @_;
     my $self = bless {}, $class;
-    my $config_hash = $self->default_config;
-    for my $config (@configs) {
-        my $hash = ref $config
-        ? $config
-        : do {
-            die "Invalid name for config file '$config'\n"
-              unless $config =~ /\.(\w+)$/;
-            my $extension = lc($1);
-            my $method = "parse_$extension\_file";
-            $self->$method($config);
-        };
-        for my $key (keys %$hash) {
-            $config_hash->{$key} = $hash->{$key};
-        }
+    my (@configs) = @_ ? @_ : $self->default_configs;
+    for my $config ($self->default_config, @configs) {
+        $self->add_config($config);
     }
-    my $config_class = $config_hash->{config_class}
-      or die "config_class not defined in configuration file(s)\n";
-    eval qq{ require $config_class }; die $@ if $@;
-    $self = bless $config_hash, $config_class;
-    attribute($_) for keys %$self;
     $self->init;
     return $self;
+}
+
+sub add_config {
+    my $self = shift;
+    my $config = shift;
+    my $hash = ref $config
+    ? $config
+    : do {
+        die "Invalid name for config file '$config'\n"
+          unless $config =~ /\.(\w+)$/;
+        my $extension = lc($1);
+        my $method = "parse_$extension\_file";
+        $self->$method($config);
+    };
+    for my $key (keys %$hash) {
+        field $key;
+        $self->$key($hash->{$key});
+    }
+    if (defined (my $config_class = $hash->{config_class})) {
+        eval qq{ require $config_class }; die $@ if $@;
+        bless $self, $config_class;
+    }
 }
 
 sub parse_file {

@@ -23,12 +23,28 @@ sub text_to_parsed {
     $block->parse;
 }
 
+sub table {
+    my $self = shift;
+    $self->{table} ||= $self->format_table;
+}
+
+sub format_table {
+    my $self = shift;
+    my %table = map {
+        my $class = $_;
+        $class->can('formatter_id') ? ($class->formatter_id, $class) : ();
+    } $self->formatter_classes;
+    \ %table;
+}
+
 package Spoon::Formatter::Unit;
 use base 'Spoon';
-field stub 'html_start';
-field stub 'html_end';
+field const html_start => '';
+field const html_end => '';
 field const contains_blocks => [];
 field const contains_phrases => [];
+field stub 'pattern_start';
+field const pattern_end => qr/.*?/;
 
 field text => '';
 field units => [];
@@ -36,6 +52,7 @@ field start_offset => 0;
 field start_end_offset => 0;
 field end_start_offset => 0;
 field end_offset => 0;
+field matched => '';
 
 sub parse {
     my $self = shift;
@@ -98,7 +115,6 @@ sub parse_phrases {
             my $class = $table->{$format_id}
               or die "No class for $format_id";
             my $unit = $class->new;
-            $text =~ s/^\s*\n//;
             $unit->text($text);
             $unit->match or next;
             $match = $unit
@@ -143,6 +159,7 @@ sub match {
     return unless $self->text =~ $self->pattern_start;
     $self->start_offset($-[0]);
     $self->start_end_offset($+[0]);
+    $self->matched(substr($self->text, $-[0], $+[0] - $-[0]));
     return 1;
 }
 
@@ -161,11 +178,20 @@ sub set_match {
 
 sub to_html {
     my $self = shift;
-    my $inner = join '', map { 
-        ref($_) ? $_->to_html : $self->escape_html($_); 
-    } @{$self->units};
+    my $units = $self->units;
+    for (my $i = 0; $i < @$units; $i ++) {
+        $units->[$i] = $self->escape_html($units->[$i])
+          unless ref $units->[$i];
+    }
+    my $inner = $self->text_filter(join '', 
+        map { 
+            ref($_) ? $_->to_html : $_; 
+        } @{$units}
+    );
     $self->html_start . $inner . $self->html_end;
 }
+
+sub text_filter { $_[1] }
 
 sub escape_html {
     my $self = shift;
