@@ -1,23 +1,21 @@
 package Spoon::Template;
 use strict;
 use warnings;
-use Spoon '-base';
+use Spoon '-Base';
 use Template;
 
-field const class_id => 'template';
-field const default_include_path => [ './template' ];
+const class_id => 'template';
+const default_include_path => [ './template' ];
 field include_path => [];
-field stub 'render';
+stub 'render';
 
 sub init {
-    my $self = shift;
     $self->use_class('config');
     $self->use_class('cgi')
       if $ENV{GATEWAY_INTERFACE};
 }
 
 sub all {
-    my $self = shift;
     return ( 
         $self->config->all,
         $ENV{GATEWAY_INTERFACE} ? ($self->cgi->all) : (),
@@ -25,7 +23,6 @@ sub all {
 }
 
 sub process {
-    my $self = shift;
     my $template = shift;
     my %vars = @_;
     my $directives = {};
@@ -48,14 +45,13 @@ sub process {
 }
 
 sub get_include_path {
-    my $self = shift;
     my $include_path = $self->include_path;
     @$include_path ? $include_path : $self->default_include_path;
 }
 
 1;
 
-__DATA__
+__END__
 
 =head1 NAME 
 

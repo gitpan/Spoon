@@ -1,49 +1,39 @@
 package Spoon::Hub;
 use strict;
-use Spoon '-base';
+use Spoon::Base '-Base';
 
-field const class_id => 'hub';
-field const action => '_default_';
+const class_id => 'hub';
+const action => '_default_';
 field 'config';
 field 'registry';
 field 'config_files' => [];
 field 'loaded_objects' => [];
 field 'post_process_actions' => [];
 
-sub new {
-    my $class = shift;
-    my ($config) = @_;
-    my $self = bless {}, $class;
-    $self->config($config);
-    return $self;
-}
-
 sub load_registry {
-    my $self = shift;
     return if defined $self->registry;
     $self->load_class('registry');
-    $self->registry->load_registry;
+    $self->registry->load;
 }
 
 sub process {
-    my $self = shift;
+    $self->load_registry;
     my $action = $self->action;
     die "No plugin for action '$action'"
-      unless defined $self->registry->lookup->actions->{$action};
+      unless defined $self->registry->lookup->action->{$action};
     my ($class_id, $method) = 
-      @{$self->registry->lookup->actions->{$action}};
+      @{$self->registry->lookup->action->{$action}};
+    $method ||= $action;
     $self->load_class($class_id);
     $self->$class_id->pre_process;
     return $self->$class_id->$method;
 }
 
 sub add_post_process {
-    my $self = shift;
     push @{$self->post_process_actions}, [@_];
 }
 
 sub post_process {
-    my $self = shift;
     for my $object (@{$self->loaded_objects}) {
         $object->post_process;
     }
@@ -55,7 +45,6 @@ sub post_process {
 }
 
 sub cleanup {
-    my $self = shift;
     for my $object (@{$self->loaded_objects}) {
         $object->cleanup;
     }
@@ -64,7 +53,6 @@ sub cleanup {
 }
 
 sub require_class {
-    my $self = shift;
     my $class_id = shift;
     my $class_id_class = "${class_id}_class";
     my $class = $self->config->$class_id_class;
@@ -73,7 +61,6 @@ sub require_class {
 }
 
 sub load_class {
-    my $self = shift;
     my ($class_id) = @_;
     return $self if $class_id eq 'hub';
     return $self->$class_id 
@@ -90,7 +77,6 @@ sub load_class {
 }
 
 sub create_class_object {
-    my $self = shift;
     my ($class_name, $class_id) = @_;
     die "No class defined for class_id '$class_id'"
       unless $class_name;

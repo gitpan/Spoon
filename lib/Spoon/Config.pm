@@ -1,18 +1,17 @@
 package Spoon::Config;
 use strict;
 use warnings;
-use Spoon '-base';
+use Spoon '-Base';
 
-field const class_id => 'config';
+const class_id => 'config';
 
 sub all {
-    my $self = shift;
     return %$self;
 }
 
-sub default_configs { () }
+sub default_configs { return }
 
-sub new {
+sub new() {
     my $class = shift;
     my $self = bless {}, $class;
     my (@configs) = @_ ? @_ : $self->default_configs;
@@ -24,7 +23,6 @@ sub new {
 }
 
 sub add_config {
-    my $self = shift;
     my $config = shift;
     my $hash = ref $config
     ? $config
@@ -46,12 +44,10 @@ sub add_config {
 }
 
 sub parse_file {
-    my $self = shift;
     $self->parse_yaml_file(@_);
 }
 
 sub parse_yaml_file {
-    my $self = shift;
     my $file = shift;
     open CONFIG, $file
       or die "Can't open $file for input:\n$!";
@@ -61,7 +57,6 @@ sub parse_yaml_file {
 }
 
 sub parse_yaml {
-    my $self = shift;
     my $yaml = shift;
     my $hash = {};
     my $latest_key = '';

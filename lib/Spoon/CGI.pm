@@ -5,7 +5,7 @@ use Spoon '-base';
 use CGI;
 our @EXPORT = qw(cgi_field);
 
-field const class_id => 'cgi';
+const class_id => 'cgi';
 
 sub all {
     my ($self) = @_;

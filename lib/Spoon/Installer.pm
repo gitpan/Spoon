@@ -2,21 +2,18 @@ package Spoon::Installer;
 use strict;
 use warnings;
 use Spoon;
-use Spoon::Utils '-base';
-use IO::All;
+use Spoon::Utils '-Base';
 
-field const class_id => 'installer';
-field const extract_to => '.';
+const class_id => 'installer';
+const extract_to => '.';
 
 sub compress_from {
-    my $self = shift;
     $self->extract_to;
 }
 
 sub new { goto &Spoon::new } # XXX Multiple inheritance workaround
 
 sub extract_files {
-    my $self = shift;
     my @files = $self->get_packed_files;
     while (@files) {
         my ($file_name, $file_contents) = splice(@files, 0, 2);
@@ -28,14 +25,12 @@ sub extract_files {
 }
 
 sub get_packed_files {
-    my $self = shift;
     my @files = split /^__(.+)__\n/m, $self->data;
     shift @files;
     return @files;
 }
         
 sub data {
-    my $self = shift;
     my $package = ref($self);
     local $/;
     my $data = eval "package $package; <DATA>";
@@ -43,11 +38,10 @@ sub data {
     return $data;
 }
 
-sub file_filter { return $_[1] }
+sub file_filter { return shift }
 
 sub compress_files {
     require File::Spec;
-    my $self = shift;
     my $source_dir = shift;
     my %source_files = map {
         ($_->name, scalar $_->slurp)
@@ -73,3 +67,28 @@ sub compress_files {
 }
 
 1;
+
+__END__
+
+=head1 NAME 
+
+Spoon::Installer - Spoon Installer Class
+
+=head1 SYNOPSIS
+
+=head1 DESCRIPTION
+
+=head1 AUTHOR
+
+Brian Ingerson <INGY@cpan.org>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2004. Brian Ingerson. All rights reserved.
+
+This program is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself.
+
+See http://www.perl.com/perl/misc/Artistic.html
+
+=cut

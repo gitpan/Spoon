@@ -8,11 +8,14 @@ inc/Module/Install/Metadata.pm
 inc/Module/Install/Win32.pm
 inc/Module/Install/WriteAll.pm
 lib/Spoon.pm
+lib/Spoon/Base.pm
 lib/Spoon/CGI.pm
 lib/Spoon/Config.pm
+lib/Spoon/Cookie.pm
 lib/Spoon/Formatter.pm
 lib/Spoon/Hub.pm
 lib/Spoon/Installer.pm
+lib/Spoon/Plugin.pm
 lib/Spoon/Registry.pm
 lib/Spoon/Template.pm
 lib/Spoon/Template/TT2.pm

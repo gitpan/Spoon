@@ -1,35 +1,23 @@
 package Spoon::Formatter;
 use strict;
 use warnings;
-use Spoon '-base';
+use Spoon '-Base';
 
-field const class_id  => 'formatter';
-field stub 'top_class';
-
-sub init {
-    my $self = shift;
-}
+const class_id  => 'formatter';
+stub 'top_class';
 
 sub text_to_html {
-    my $self = shift;
+    require CGI;
     $self->text_to_parsed(@_)->to_html;
 }
 
 sub text_to_parsed {
-    my $self = shift;
-    my $text = shift;
-    my $block = $self->top_class->new($self->hub);
-    $block->text($text);
-    $block->parse;
+    $self->top_class->new($self->hub, shift)->parse;
 }
 
-sub table {
-    my $self = shift;
-    $self->{table} ||= $self->format_table;
-}
+sub table { $self->{table} ||= $self->create_table }
 
-sub format_table {
-    my $self = shift;
+sub create_table {
     my %table = map {
         my $class = $_;
         $class->can('formatter_id') ? ($class->formatter_id, $class) : ();
@@ -37,14 +25,25 @@ sub format_table {
     \ %table;
 }
 
+sub wafl_table { $self->{wafl_table} ||= $self->create_wafl_table }
+
+sub create_wafl_table {
+    my %table = map {
+        my $class = $_;
+        $class->can('wafl_id') ? ($class->wafl_id, $class) : ();
+    } $self->wafl_classes;
+    \ %table;
+}
+
 package Spoon::Formatter::Unit;
 use base 'Spoon';
-field const html_start => '';
-field const html_end => '';
-field const contains_blocks => [];
-field const contains_phrases => [];
-field stub 'pattern_start';
-field const pattern_end => qr/.*?/;
+const formatter_id => '';
+const html_start => '';
+const html_end => '';
+const contains_blocks => [];
+const contains_phrases => [];
+# stub 'pattern_start'; # XXX messes multiple inheritance
+const pattern_end => qr/.*?/;
 
 field text => '';
 field units => [];
@@ -53,13 +52,22 @@ field start_end_offset => 0;
 field end_start_offset => 0;
 field end_offset => 0;
 field matched => '';
+field 'next_unit';
+field 'prev_unit';
+
+sub new() {
+    my $class = shift;
+    my $self = bless {}, $class;
+    $self->hub(shift);
+    $self->text(shift);
+    return $self;
+}
 
 sub parse {
-    my $self = shift;
     $self->parse_blocks;
     my $units = $self->units;
 
-    if (@$units == 1 and not ref $units->[0] and $self->contains_phrases) {
+    if (@$units == 1 and not ref $units->[0] and @{$self->contains_phrases}) {
         $self->text(shift @$units);
         $self->start_offset(0);
         $self->end_offset(0);
@@ -69,7 +77,6 @@ sub parse {
 }
     
 sub parse_blocks {
-    my $self = shift;
     my $text = $self->text;
     $self->text(undef);
     my $units = $self->units;
@@ -80,8 +87,7 @@ sub parse_blocks {
         for my $format_id (@$contains) {
             my $class = $table->{$format_id}
               or die "No class for $format_id";
-            my $unit = $class->new;
-            $text =~ s/^\s*\n//;
+            my $unit = $class->new($self->hub);
             $unit->text($text);
             $unit->match or next;
             $match = $unit
@@ -93,17 +99,25 @@ sub parse_blocks {
             push @$units, $text;
             last;
         }
-        $match->hub($self->hub);
         push @$units, substr($text, 0, $match->start_offset)
           if $match->start_offset;
         $text = substr($text, $match->end_offset);
         push @$units, $match;
     }
+    for (my $i = 0; $i < @$units; $i++) {
+        next unless ref $units->[$i];
+        $units->[$i]->next_unit($units->[$i + 1]);
+        $units->[$i]->prev_unit($units->[$i - 1]) if $i;
+    }
     $_->parse for grep ref($_), @{$self->units};
 }
 
+sub match {
+    return unless $self->text =~ $self->pattern_block;
+    $self->set_match;
+}
+
 sub parse_phrases {
-    my $self = shift;
     my $text = $self->text;
     $self->text(undef);
     my $units = $self->units;
@@ -114,13 +128,13 @@ sub parse_phrases {
         for my $format_id (@$contains) {
             my $class = $table->{$format_id}
               or die "No class for $format_id";
-            my $unit = $class->new;
+            my $unit = $class->new($self->hub);
             $unit->text($text);
-            $unit->match or next;
+            $unit->match_phrase or next;
             $match = $unit
               if not defined $match or 
                  $unit->start_offset < $match->start_offset;
-            last unless $match->start_offset;
+            last if $match->start_offset == 0;
         }
         if ($self->start_end_offset) {
             if ($text =~ $self->pattern_end) {
@@ -144,7 +158,6 @@ sub parse_phrases {
             $text = substr($text, $match->end_offset);
             next;
         }
-        $match->hub($self->hub);
         push @$units, substr($text, 0, $match->start_offset)
           if $match->start_offset;
         $text = substr($text, $match->start_end_offset);
@@ -154,17 +167,17 @@ sub parse_phrases {
     }
 }
 
-sub match {
-    my $self = shift;
+sub match_phrase {
     return unless $self->text =~ $self->pattern_start;
     $self->start_offset($-[0]);
     $self->start_end_offset($+[0]);
     $self->matched(substr($self->text, $-[0], $+[0] - $-[0]));
-    return 1;
+    my $pattern_end = $self->pattern_end
+      or return 1;
+    return substr($self->text, $+[0]) =~ $pattern_end;
 }
 
 sub set_match {
-    my $self = shift;
     my ($text, $start, $end) = @_;
     $text = $1 unless defined $text;
     $text = '' unless defined $text;
@@ -177,42 +190,92 @@ sub set_match {
 }
 
 sub to_html {
-    my $self = shift;
     my $units = $self->units;
     for (my $i = 0; $i < @$units; $i ++) {
         $units->[$i] = $self->escape_html($units->[$i])
           unless ref $units->[$i];
     }
+    $self->html;
+}
+
+sub html {
     my $inner = $self->text_filter(join '', 
         map { 
             ref($_) ? $_->to_html : $_; 
-        } @{$units}
+        } @{$self->units}
     );
     $self->html_start . $inner . $self->html_end;
 }
 
-sub text_filter { $_[1] }
+sub text_filter { shift }
 
-sub escape_html {
-    my $self = shift;
-    my $text = shift;
-    $text =~ s/&/&amp;/g;
-    $text =~ s/</&lt;/g;
-    $text =~ s/>/&gt;/g;
-    $text;
+sub escape_html { CGI::escapeHTML(shift) }
+
+################################################################################
+package Spoon::Formatter::Block;
+use base 'Spoon::Formatter::Unit';
+
+################################################################################
+package Spoon::Formatter::Phrase;
+use base 'Spoon::Formatter::Unit';
+sub contains_phrases {
+    my $id = $self->formatter_id;
+    [ grep {$_ ne $id} @{$self->all_phrases} ];
 }
 
-package Spoon::WAFL::Block;
+################################################################################
+package Spoon::Formatter::Token;
 use base 'Spoon::Formatter::Unit';
-field const formatter_id => 'wafl_block';
 
-package Spoon::WAFL::Phrase;
-use base 'Spoon::Formatter::Unit';
-field const formatter_id => 'wafl_phrase';
+################################################################################
+package Spoon::Formatter::WaflBlock;
+use base 'Spoon::Formatter::Block';
+const formatter_id => 'wafl_block';
+field 'method';
+field 'arguments';
+
+sub text_filter {
+    '<div class="' . $self->method . '">' . (shift) . '</div>';
+}
+
+sub match {
+    return unless
+      $self->text =~ /(?:^\.([\w\-]+)\s*\n)((?:.*\n)*?)(?:^\.(\1)\s*\n|\z)/m;
+    $self->set_match($2);
+    $self->method($1);
+    my $class = $self->hub->formatter->wafl_table->{$self->method};
+    bless $self, $class
+      if defined $class and $class->isa(__PACKAGE__);
+    return 1;
+}
+
+################################################################################
+package Spoon::Formatter::WaflPhrase;
+use base 'Spoon::Formatter::Token';
+const formatter_id => 'wafl_phrase';
+const pattern_start =>
+  qr/(^|(?<=[\s\-]))\{\w+(\s*:)?\s*.*?\}(?=[^A-Za-z0-9]|\z)/;
+field 'method';
+field 'arguments';
+
+sub html_start {
+    '<span class="' . $self->method . '">' . $self->arguments . '</span>';
+}
+
+sub match_phrase {
+    return unless super;
+    return unless $self->matched =~ /^\{([\w\-]+)(?:\s*\:)?\s*(.*)\}$/;
+    $self->arguments($2);
+    $self->method($1);
+    my $class = $self->hub->formatter->wafl_table->{$self->method};
+    bless $self, $class
+      if defined $class and $class->isa(__PACKAGE__);
+    return 1;
+}
 
 1;
 
-__DATA__
+__END__
 
 =head1 NAME 
 

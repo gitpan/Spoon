@@ -1,65 +1,47 @@
 package Spoon;
 use strict;
 use warnings;
-use Spiffy 0.15 '-base';
-our $VERSION = '0.12';
+our $VERSION = '0.13';
+use Spiffy 0.16 ();
+use Spoon::Base '-Base';
 
-field const class_id => 'main';
-field const config_class => 'Spoon::Config';
-field 'hub';
-field 'used_classes' => [];
+const class_id => 'main';
+const config_class => 'Spoon::Config';
+field using_debug => 0;
 
-sub new {
-    my $class = shift;
-    my $self = bless {}, ref($class) || $class;
-    $self->hub(shift);
-    return $self;
-}
+sub paired_arguments { qw(-config_class) }
 
 sub load_hub {
-    my $self = shift;
-    my @config_files = @_;
-    my $config_class = $self->config_class;
+    my ($args, @config_files) = $self->parse_arguments(@_);
+    my $config_class = $args->{config_class} || $self->config_class;
     eval "require $config_class";
     die "Can't require $config_class:\n$@" if $@;
     my $config = $config_class->new(@config_files);
     my $hub_class = $config->hub_class;
     eval qq{ require $hub_class }; die $@ if $@;
-    my $hub = $hub_class->new($config);
+    my $hub = $hub_class->new;
+    $hub->config($config);
+    $hub->init;
     $config->hub($hub);
     $hub->config_files(\@config_files);
     $self->hub($hub);
+    $self->init;
+    no warnings;
+    $main::HUB = $hub;
     return $hub;
 }
 
-sub use_class {
-    my $self = shift;
-    my ($class_id) = @_;
-    $self->hub->load_class($class_id);
-    my $package = caller;
-    field -package => $package, $class_id;
-    $self->$class_id($self->hub->$class_id);
-    push @{$self->used_classes}, $class_id;
-}       
-        
-sub init { }
-sub post_process { }
-
-my $global_die;
 sub debug {
-    my $self = shift;
-    my $level = shift || 1;
-    if ($level == 0) {
-        *CORE::GLOBAL::die = $self->global_die
-          if $self->global_die;
-    }
-    elsif ($level == 1) {
-        *CORE::GLOBAL::die =
-          sub { require Carp; goto &Carp::confess };
+    no warnings;
+    if ($ENV{GATEWAY_INTERFACE}) {
+        eval q{use CGI::Carp qw(fatalsToBrowser)}; die $@ if $@;
+        *CORE::GLOBAL::die = sub { goto &CGI::Carp::confess };
     }
     else {
-        die "Undefined debug level '$level'";
+        require Carp;
+        *CORE::GLOBAL::die = sub { goto &Carp::confess };
     }
+    $self->using_debug(1);
     return $self;
 }
 
@@ -90,7 +72,7 @@ You need to build your own applications from it.
 
 =head1 SEE ALSO
 
-Kwiki, Spiffy
+Kwiki, Spork, Spiffy
 
 =head1 DEDICATION
 
