@@ -16,9 +16,16 @@ sub print {
 
 sub get {
     $self->redirect
-    ? CGI::redirect($self->redirect)
+    ? CGI::redirect($self->redirect_value)
     : CGI::header($self->value);
 }
+
+sub redirect_value {                                                           
+    (                                                                          
+        $self->hub->cookie->set_cookie_headers,                                
+        -location => $self->redirect,                                          
+    );                                                                         
+}                                                                              
 
 sub value {
     (

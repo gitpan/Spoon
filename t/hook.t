@@ -4,6 +4,7 @@ use warnings;
 use Test::More tests => 11;
 
 use Spoon;
+Spoon->debug;
 
 my %classes = (
     test_class => 'TestHook',
@@ -11,7 +12,6 @@ my %classes = (
 
 {
     my $hub = Spoon->new->load_hub(\%classes);
-    $hub->registry->load_dynamic;
     is($hub->test->number, 42);
     $hub->add_hook('test:number' => post => sub { 43 });
     is($hub->test->number, 43);
@@ -23,7 +23,6 @@ my %classes = (
 
 {
     my $hub = Spoon->new->load_hub(\%classes);
-    $hub->registry->load_dynamic;
     is($hub->test->number, 42);
     my $h1 = $hub->add_hook('test:number' => post => 'test:other');
     is($hub->test->number, 45);
@@ -40,7 +39,7 @@ my %classes = (
 }
 
 {
-    my $hub = Spoon->new->load_hub(\%classes);
-    $hub->registry->load_dynamic;
+    my $main = Spoon->new;
+    my $hub = $main->load_hub(\%classes);
     is($hub->test->number, 42);
 }

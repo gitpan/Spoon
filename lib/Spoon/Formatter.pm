@@ -4,13 +4,18 @@ use Spoon::Base -Base;
 const class_id  => 'formatter';
 stub 'top_class';
 
+sub new {
+    $self = super;
+    $self->hub;
+    return $self;
+}
+
 sub text_to_html {
-    require CGI;
     $self->text_to_parsed(@_)->to_html;
 }
 
 sub text_to_parsed {
-    $self->top_class->new(hub => $self->hub, text => shift)->parse;
+    $self->top_class->new(text => shift)->parse;
 }
 
 sub table { $self->{table} ||= $self->create_table }
@@ -63,7 +68,8 @@ field text => '';
 field units => [];
 field start_offset => 0;
 field start_end_offset => 0;
-field end_start_offset => 0;
+# XXX this field is never used
+#field end_start_offset => 0;
 field end_offset => 0;
 field matched => '';
 field -weak => 'next_unit';
@@ -81,7 +87,40 @@ sub parse {
     }
     return $self;
 }
-    
+
+sub link_units {
+    my $units = shift;
+    for (my $i = 0; $i < @$units; $i++) {
+        next unless ref $units->[$i];
+        $units->[$i]->next_unit($units->[$i + 1]);
+        $units->[$i]->prev_unit($units->[$i - 1]) if $i;
+    }
+}
+
+# XXX extracted to allow performance analysis
+# very similar to match_phrase_format_id, so
+# room for refactor there 
+#
+# Instead of calling $unit->match make it
+# possible to call $class->match and have it
+# work 
+sub match_block_format_id {
+    my ($contains, $table, $text) = @_;
+    my $match;
+    for my $format_id (@$contains) {
+        my $class = $table->{$format_id}
+          or die "No class for $format_id";
+        my $unit = $class->new;
+        $unit->text($text);
+        $unit->match or next;
+        $match = $unit
+          if not defined $match or 
+             $unit->start_offset < $match->start_offset;
+        last unless $match->start_offset;
+    }
+    return $match;
+}
+ 
 sub parse_blocks {
     my $text = $self->text;
     $self->text(undef);
@@ -89,18 +128,7 @@ sub parse_blocks {
     my $table = $self->hub->formatter->table;
     my $contains = $self->contains_blocks;
     while ($text) {
-        my $match;
-        for my $format_id (@$contains) {
-            my $class = $table->{$format_id}
-              or die "No class for $format_id";
-            my $unit = $class->new(hub => $self->hub);
-            $unit->text($text);
-            $unit->match or next;
-            $match = $unit
-              if not defined $match or 
-                 $unit->start_offset < $match->start_offset;
-            last unless $match->start_offset;
-        }
+        my $match = $self->match_block_format_id($contains, $table, $text);
         if (not defined $match) {
             push @$units, $text;
             last;
@@ -108,19 +136,39 @@ sub parse_blocks {
         push @$units, substr($text, 0, $match->start_offset)
           if $match->start_offset;
         $text = substr($text, $match->end_offset);
+        $match->unit_match;
         push @$units, $match;
     }
-    for (my $i = 0; $i < @$units; $i++) {
-        next unless ref $units->[$i];
-        $units->[$i]->next_unit($units->[$i + 1]);
-        $units->[$i]->prev_unit($units->[$i - 1]) if $i;
-    }
+    $self->link_units($units);
     $_->parse for grep ref($_), @{$self->units};
 }
 
 sub match {
     return unless $self->text =~ $self->pattern_block;
     $self->set_match;
+}
+
+# XXX extracted to allow performance analysis
+# very similar to match_block_format_id, so
+# room for refactor 
+sub match_phrase_format_id {
+    my ($contains, $table, $text) = @_;
+    my $match;
+    for my $format_id (@$contains) {
+        my $class = $table->{$format_id}
+          or die "No class for $format_id";
+        # XXX why do we make a new one every time, instead of 
+        # just setting text and doing the match? Ah, tests
+        # show they carry some state. oh well
+        my $unit = $class->new;
+        $unit->text($text);
+        $unit->match_phrase or next;
+        $match = $unit
+          if not defined $match or 
+             $unit->start_offset < $match->start_offset;
+        last if $match->start_offset == 0;
+    }
+    return $match;
 }
 
 sub parse_phrases {
@@ -130,18 +178,7 @@ sub parse_phrases {
     my $table = $self->hub->formatter->table;
     my $contains = $self->contains_phrases;
     while ($text) {
-        my $match;
-        for my $format_id (@$contains) {
-            my $class = $table->{$format_id}
-              or die "No class for $format_id";
-            my $unit = $class->new(hub => $self->hub);
-            $unit->text($text);
-            $unit->match_phrase or next;
-            $match = $unit
-              if not defined $match or 
-                 $unit->start_offset < $match->start_offset;
-            last if $match->start_offset == 0;
-        }
+        my $match = $self->match_phrase_format_id($contains, $table, $text);
         if ($self->start_end_offset) {
             if ($text =~ $self->pattern_end) {
                 if (not defined $match or $-[0] < $match->start_offset) {
@@ -159,18 +196,24 @@ sub parse_phrases {
             push @$units, $text;
             return '';
         }
-        if ($match->end_start_offset) {
-            push @$units, $match;
-            $text = substr($text, $match->end_offset);
-            next;
-        }
+# XXX: this code is never called (as far as we know...) 
+#         if ($match->end_start_offset) {
+#             push @$units, $match;
+#             $text = substr($text, $match->end_offset);
+#             next;
+#         }
         push @$units, substr($text, 0, $match->start_offset)
           if $match->start_offset;
         $text = substr($text, $match->start_end_offset);
         $match->text($text);
         $text = $match->parse_phrases;
+        $match->unit_match;
         push @$units, $match;
     }
+}
+
+# empty for hooking
+sub unit_match {
 }
 
 sub match_phrase {

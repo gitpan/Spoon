@@ -52,7 +52,7 @@ sub add_params {
 
 sub defined {
     my $param = shift;
-    defined CGI::param($param);
+    defined CGI::param($param) or defined CGI::url_param($param);
 }
 
 sub all {
@@ -66,13 +66,26 @@ sub vars {
 
 sub _get_raw {
     my $field = shift;
-    if (@_) {
-        $self->{$field} = shift;
-        return $self;
+
+    my @values;
+    if (defined(my $value = $self->{$field})) {
+        @values = ref($value)
+          ? @$value
+          : $value;
     }
-    my @values = defined $self->{$field}
-      ? $self->{$field}
-      : CGI::param($field);
+    else {
+        @values = defined CGI::param($field)
+          ? CGI::param($field)
+          : CGI::url_param($field);
+
+        $self->utf8_decode($_)
+          for grep defined, @values;
+
+        $self->{$field} = @values > 1
+          ? \@values
+          : $values[0];
+    }
+
     return wantarray
       ? @values 
       : defined $values[0]
@@ -87,7 +100,7 @@ sub _get_upload {
 }
 
 sub _utf8_filter {
-    $self->utf8_decode($_[0]);
+    # This is left in for backwards compatibility
 }
 
 sub _trim_filter {

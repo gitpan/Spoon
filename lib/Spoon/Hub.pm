@@ -5,16 +5,14 @@ const class_id => 'hub';
 const action => '_default_';
 
 field main => -weak;
-field hub => -weak,
-      -init => '$self';
-field config =>
-      -init => '$self->load_class("config")';
-field registry =>
-      -init => '$self->load_class("registry")';
-
 field config_files => [];
-field loaded_objects => [];
 field all_hooks => [];
+
+sub new {
+    $self = super;
+    $self->init;
+    $Spoon::Base::HUB = $self;
+}
 
 our $AUTOLOAD;
 sub AUTOLOAD {
@@ -42,7 +40,6 @@ sub process {
 }
 
 sub preload {
-    $self->registry->load;
     my $preload = $self->registry->lookup->preload;
     map {
         $self->load_class($_->[0])
@@ -55,55 +52,28 @@ sub preload {
     return $self;
 }
 
-sub cleanup {
-    for my $object (@{$self->loaded_objects}) {
-        $object->cleanup;
-    }
-    $self->config(undef);
-    #XXX Maybe need to undef class_id fields for other loaded classes
-}
-
-# XXX Slated for oblivion. Not called anywhere apparently.
-sub require_class {
-    my $class_id = shift;
-    my $class_id_class = "${class_id}_class";
-    my $class = $self->config->$class_id_class;
-    eval "require $class";
-    die $@ if $@;
-    return $class;
-}
-
 sub load_class {
-    my ($class_id) = @_;
+    my $class_id = shift;
     return $self if $class_id eq 'hub';
     return $self->$class_id 
       if $self->can($class_id) and defined $self->{$class_id};
+
     my $class_class = $class_id . '_class';
-    my $registry = $self->{registry};
+
     my $class_name = $self->config->can($class_class)
         ? $self->config->$class_class
-        : defined $registry
-          ? (defined $registry->lookup and
-             UNIVERSAL::isa($registry->lookup,
-                            $registry->lookup_class)
-            )
-            ? $registry->lookup->classes->{$class_id}
-            : Carp::confess "Can't find a class for class_id '$class_id'"
+        : $self->registry_loaded
+          ? $self->registry->lookup->classes->{$class_id}
           : Carp::confess "Can't find a class for class_id '$class_id'";
-    $self->create_class_object($class_name, $class_id);
-}
 
-sub create_class_object {
-    my ($class_name, $class_id) = @_;
     Carp::confess "No class defined for class_id '$class_id'"
       unless $class_name;
     eval "require $class_name" unless $class_name->can('new');
     die $@ if $@;
-    $self->add_hooks($class_name)
+    $self->add_hooks
       unless $class_id eq 'hooks';
-    my $object = $class_name->new(hub => $self)
+    my $object = $class_name->new
       or die "Can't create new '$class_name' object";
-    push @{$self->loaded_objects}, $object;
     $class_id ||= $object->class_id;
     die "No class_id defined for class: '$class_name'\n"
       unless $class_id;
@@ -142,7 +112,7 @@ sub remove_hooks {
 
 sub registry_loaded {
     defined $self->{registry} &&
-    defined $self->{registry}->lookup;
+    defined $self->{registry}{lookup};
 }
 
 sub DESTROY {

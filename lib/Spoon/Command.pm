@@ -10,13 +10,13 @@ sub process {
     $self->quiet(1)
       if $args->{-q} || $args->{-quiet};
     my $action = $self->get_action(shift(@values))
-      or return $self->usage;
+      or return $self->default_action;
     $action->(@values);
 }
 
 sub get_action {
     my $action = shift
-      or return $self->default_action;
+      or return;
     $action =~ s/^-//
       or return;
     my $method = "handle_$action";

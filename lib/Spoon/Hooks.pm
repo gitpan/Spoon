@@ -90,6 +90,7 @@ field 'replacement';
 sub unhook {
     my ($hook_point, $original, $replacement) = 
       @{$self}{qw(hook_point original replacement)};
+    %$self = ();
     return unless defined $hook_point;
     no strict 'refs';
     my $current = *$hook_point{CODE};
@@ -97,8 +98,7 @@ sub unhook {
     die "Unhooking error for $hook_point"
       unless "$current" eq "$replacement";
     no warnings;
-    *$hook_point = $self->{original};
-    %$self = ();
+    *$hook_point = $original;
     return 1;
 }
 

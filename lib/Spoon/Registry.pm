@@ -6,7 +6,8 @@ const registry_file => 'registry.dd';
 const registry_directory => '.';
 const lookup_class => 'Spoon::Lookup';
 
-field 'lookup';
+field lookup =>
+      -init => '$self->load';
 field 'temp_lookup';
 field 'current_class_id';
 
@@ -14,19 +15,16 @@ sub registry_path {
     join '/', $self->registry_directory, $self->registry_file; 
 }
 
-sub load_dynamic {
-    $self->update;
-    $self->lookup(bless $self->lookup, $self->lookup_class);
-    return $self->lookup;
-}
-
 sub load {
-    return $self->lookup 
-      if defined $self->lookup and
-         ref $self->lookup eq $self->lookup_class;
     my $path = $self->registry_path;
-    my $lookup = eval io($path)->all;
-    die "$path seems to be corrupt:\n$@" if $@;
+    my $lookup;
+    if (-e $path) {
+        $lookup = eval io($path)->all;
+        die "$path seems to be corrupt:\n$@" if $@;
+    }
+    else {
+        $lookup = $self->update->lookup;
+    }
     $self->lookup(bless $lookup, $self->lookup_class);
     return $self->lookup;
 }
@@ -56,22 +54,21 @@ sub not_a_plugin {
 sub load_class {
     my $class_name = shift;
     eval "require $class_name"; die $@ if $@;
-    $class_name->new(hub => $self->hub);
+    $class_name->new;
 }
 
 sub set_core_classes {
-    my %all = $self->hub->config->all;
-    my $hub = $self->hub;
-    for my $key (keys %all) {
-        next unless $key =~ /(.*)_class$/;
+    my %all = $self->hub->config->all; 
+    my $hub = $self->hub; 
+    for my $key (keys %all) { 
+        next unless $key =~ /(.*)_class$/; 
         my $class_id = $1;
-        my $class_name = $all{$key};
-        $self->temp_lookup->{classes}{$class_id} = $class_name;
-        my $object = $hub->can($class_id) && 
-          $hub->$class_id ||
-          $self->load_class($class_name);
-        $self->add_classes($object);
-    }
+        my $class_name = $all{$key}; 
+        $self->temp_lookup->{classes}{$class_id} = $class_name; 
+        my $object = $hub->can($class_id) && $hub->$class_id || 
+          $self->load_class($class_name); 
+          $self->add_classes($object); 
+    } 
 }
 
 my sub set_class_info {
@@ -98,7 +95,7 @@ sub add_classes {
       $object->can('inline_classes');
     my $classes = $self->temp_lookup->{classes};
     for my $class_name (@{$object->inline_classes}) {
-        my $object = $class_name->new(hub => $self->hub);
+        my $object = $class_name->new;
         $classes->{$object->class_id} = $class_name;
     }
 }

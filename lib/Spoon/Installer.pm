@@ -89,9 +89,31 @@ sub get_packed_files {
         shift @files;
         while (@files) {
             my ($name, $content) = splice(@files, 0, 2);
-            next if $seen{$name}++;
-            push @return, $name, $content;
+            $name = $self->resolve_install_path($name)
+              if $self->can('resolve_install_path');
+            my $name2 = $name;
+            $name2 =~ s/^\!//;
+            next if $seen{$name2}++;
+            $content ||= '';
+            push @return, $name, $content
+              if length $content;
         }
+    }
+    return @return;
+}
+
+sub get_local_packed_files {
+    my @return;
+    my $class = ref $self;
+    my $data = $self->data($class)
+      or next;
+    my @files = split /^__(.+)__\n/m, $data;
+    shift @files;
+    while (@files) {
+        my ($name, $content) = splice(@files, 0, 2);
+        $name = $self->resolve_install_path($name)
+          if $self->can('resolve_install_path');
+        push @return, $name, $content;
     }
     return @return;
 }
@@ -107,7 +129,7 @@ sub compress_files {
     require File::Spec;
     my $source_dir = shift;
     my $new_pack = '';
-    my @files = $self->get_packed_files;
+    my @files = $self->get_local_packed_files;
     my $first_file = $files[0]
       or return;
     my $directory = $self->compress_from;
@@ -121,6 +143,8 @@ sub compress_files {
         my $content = $locked 
         ? $file_contents
         : $self->get_file_content($source_path);
+        $content =~ s/\r\n/\n/g;
+        $content =~ s/\r/\n/g;
         $new_pack .= "__$locked${file_name}__\n$content";
     }
     my $module = ref($self) . '.pm';
@@ -161,6 +185,7 @@ sub strip_html {
 sub compress_lib {
     die "Must be run from the module source code directory\n"
       unless -d "lib";
+    unshift @INC,'lib';
     my $source_dir = shift
       or die "No source directory specified\n";
     die "Invalid source directory '$source_dir'\n"
@@ -177,6 +202,7 @@ sub compress_lib {
     grep {
         my $name = $_;
         eval "require $name";
+        die $@ if $@;
         UNIVERSAL::can($name, 'compress_files')
           and $name !~ /::(Installer)$/;
     } map {

@@ -6,12 +6,43 @@ use IO::All 0.32;
 our @EXPORT = qw(io trace);
 our @EXPORT_OK = qw(conf);
 
-sub init { }
-
 field used_classes => [];
 field 'encoding';
-field hub => -weak;
 const plugin_base_directory => './plugin';
+field using_debug => 0;
+field config_class => 'Spoon::Config';
+
+sub hub {
+    return $Spoon::Base::HUB 
+      if defined($Spoon::Base::HUB) and not @_;
+    Carp::confess "Too late to create a new hub. One already exists"
+      if defined $Spoon::Base::HUB;
+    
+    my ($args, @config_files);
+    {
+        no warnings;
+        local *paired_arguments = sub { qw(-config_class) };
+        ($args, @config_files) = $self->parse_arguments(@_);
+    }
+    my $config_class = $args->{-config_class} || 
+      $self->can('config_class')
+      ? $self->config_class
+      : 'Spoon::Config';
+    eval "require $config_class"; die $@ if $@;
+    my $config = $config_class->new(@config_files);
+    my $hub_class = $config->hub_class;
+    eval "require $hub_class";
+    my $hub = $hub_class->new(
+        config => $config,
+        config_files => \@config_files,
+    );
+}
+
+sub destroy_hub {
+    undef $Spoon::Base::HUB;
+}
+
+sub init { }
 
 sub assert {
     die "Assertion failed" unless shift;
@@ -47,29 +78,6 @@ sub clone {
     return bless {%$self}, ref $self;
 }
 
-sub use_class {
-    my ($class_id) = @_;
-    Carp::confess("No hub in '$class_id' object")  
-      unless $self->hub;
-    my $object = $self->hub->$class_id;
-    my $package = ref($self);
-    field -package => $package, $class_id;
-    $self->$class_id($self->hub->$class_id);
-    push @{$self->used_classes}, $class_id;
-    return $object;
-}       
-        
-sub use_cgi {
-    my $class = shift
-      or die "use_cgi requires a class name";
-    eval qq{require $class} unless $class->can('new');
-    my $package = ref($self);
-    field -package => $package, 'cgi';
-    my $object = $class->new(hub => $self->hub);
-    $object->init;
-    $self->cgi($object);
-}
-
 sub is_in_cgi {
     defined $ENV{GATEWAY_INTERFACE};
 }
@@ -95,6 +103,21 @@ sub plugin_directory {
     return $dir;
 }
     
+sub debug {
+    no warnings;
+    if ($self->is_in_cgi) {
+        eval 'use CGI::Carp qw(fatalsToBrowser)'; die $@ if $@;
+        $SIG{__DIE__} = sub { CGI::Carp::confess(@_) }
+    }
+    else {
+        require Carp;
+        $SIG{__DIE__} = sub { Carp::confess(@_) }
+    }
+    $self->using_debug(1)
+      if ref $self;
+    return $self;
+}
+
 our ($UPPER, $LOWER, $ALPHA, $NUM, $ALPHANUM, $WORD, $WIKIWORD);
 push @EXPORT_OK, qw($UPPER $LOWER $ALPHA $NUM $ALPHANUM $WORD $WIKIWORD);
 our %EXPORT_TAGS = (char_classes => [@EXPORT_OK]);
@@ -117,12 +140,6 @@ else {
     $WIKIWORD = "$UPPER$LOWER$NUM" . '\p{ConnectorPunctuation}\pM';
 }
 
-sub cleanup {
-    for my $class_id (@{$self->used_classes}, 'hub') {
-        $self->$class_id(undef);
-    }
-}
-
 sub env_check {
     my $variable = shift;
     die "Environment variable '$variable' not set"
@@ -140,32 +157,38 @@ sub dumper_to_file {
 }
 
 # Codecs and Escaping
-my $use_utf8;
-sub use_utf8 {
-    $use_utf8 = shift if @_;
-    return $use_utf8 if defined($use_utf8);
-    $use_utf8 = $] < 5.008 ? 0 : 1;
+my $has_utf8;
+sub has_utf8 {
+    $has_utf8 = shift if @_;
+    return $has_utf8 if defined($has_utf8);
+    $has_utf8 = $] < 5.008 ? 0 : 1;
+    require Encode if $has_utf8;
 }
 
 sub utf8_decode {
-    require Encode;
-    utf8::decode($_[0]) if $self->use_utf8 and defined $_[0] and
-                           not Encode::is_utf8($_[0]);
-    return $_[0] if defined wantarray;
+    $_[0] = Encode::decode('utf8', $_[0])
+      if $self->has_utf8 and
+         defined $_[0] and
+         not Encode::is_utf8($_[0]);
+    return $_[0];
 }
 
 sub utf8_encode {
-    utf8::encode($_[0]) if $self->use_utf8 and defined $_[0];
-    return $_[0] if defined wantarray;
+    $_[0] = Encode::encode('utf8', $_[0])
+      if $self->has_utf8 and
+         defined $_[0];
+    return $_[0];
 }
 
 sub uri_escape {
+    require CGI::Util;
     my $data = shift;
     $self->utf8_encode($data);
     return CGI::Util::escape($data);
 }
 
 sub uri_unescape {
+    require CGI::Util;
     my $data = shift;
     $data = CGI::Util::unescape($data);
     $self->utf8_decode($data);

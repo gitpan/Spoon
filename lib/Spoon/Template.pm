@@ -6,11 +6,10 @@ const class_id => 'template';
 const template_path => [ './template' ];
 field path => [];
 stub 'render';
+field config => -init => '$self->hub->config';
+field cgi => -init => '$self->hub->cgi';
 
 sub init {
-    $self->use_class('config');
-    $self->use_class('cgi')
-      if $self->is_in_cgi;
     $self->add_path(@{$self->template_path});
 }
 

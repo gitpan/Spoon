@@ -1,50 +1,15 @@
 package Spoon;
 use Spoon::Base -Base;
-our $VERSION = '0.21';
+our $VERSION = '0.22';
 
 const class_id => 'main';
-const config_class => 'Spoon::Config';
-field using_debug => 0;
-field 'hub';
-
-sub paired_arguments { qw(-config_class) }
 
 sub load_hub {
-    return $self->hub
-      if $self->hub;
-    $self->hub($self->new_hub(@_));
-}
-
-sub new_hub {
-    my ($args, @config_files) = $self->parse_arguments(@_);
-    my $config_class = $args->{-config_class} || $self->config_class;
-    eval "require $config_class"; die $@ if $@;
-    my $config = $config_class->new(@config_files);
-    my $hub_class = $config->hub_class;
-    eval "require $hub_class";
-    my $hub = $hub_class->new;
-    $hub->config($config);
-    $hub->init;
-    $config->hub($hub);
-    $hub->config_files(\@config_files);
+    $self->destroy_hub;
+    my $hub = $self->hub(@_);
     $hub->main($self);
-    $self->hub($hub);
     $self->init;
     return $hub;
-}
-
-sub debug {
-    no warnings;
-    if ($self->is_in_cgi) {
-        eval q{use CGI::Carp qw(fatalsToBrowser)}; die $@ if $@;
-        $SIG{__DIE__} = sub { CGI::Carp::confess(@_) }
-    }
-    else {
-        require Carp;
-        $SIG{__DIE__} = sub { Carp::confess(@_) }
-    }
-    $self->using_debug(1);
-    return $self;
 }
 
 __END__

@@ -1,23 +1,24 @@
 package Spoon::Cookie;
 use Spoon::Base -Base;
+use CGI;
 
 field 'preferences';
 field 'jar' => {};
+field 'jar_opt' => {};
 const expires => '+5y';
 const path => '/';
 const prefix => 'Spoon-';
 const domain => '';
 
 sub init {
-    $self->use_class('config');
-    $self->use_class('cgi');
     $self->fetch();
 }
 
 sub write {
-    my ($cookie_name, $hash) = @_;
+    my ($cookie_name, $hash, $opt) = @_;
     require Storable;
     $self->jar->{$cookie_name} = $hash;
+    $self->jar_opt->{$cookie_name} = $opt if $opt;
 }
 
 sub read {
@@ -39,6 +40,7 @@ sub set_cookie_headers {
             -path => $self->path,
             -expires => $self->expires,
             -domain => $self->domain,
+            %{$self->jar_opt->{$_} || {}},
         );
     } keys %$jar;
     return @$cookies ? (-cookie => $cookies) : ();
