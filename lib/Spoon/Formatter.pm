@@ -18,8 +18,9 @@ sub text_to_parsed {
 sub table { $self->{table} ||= $self->create_table }
 
 sub create_table {
+    my $class_prefix = $self->class_prefix;
     my %table = map {
-        my $class = $_;
+        my $class = /::/ ? $_ : "$class_prefix$_";
         $class->can('formatter_id') ? ($class->formatter_id, $class) : ();
     } $self->formatter_classes;
     \ %table;
@@ -28,8 +29,9 @@ sub create_table {
 sub wafl_table { $self->{wafl_table} ||= $self->create_wafl_table }
 
 sub create_wafl_table {
+    my $class_prefix = $self->class_prefix;
     my %table = map {
-        my $class = $_;
+        my $class = /::/ ? $_ : "$class_prefix$_";
         $class->can('wafl_id') ? ($class->wafl_id, $class) : ();
     } $self->wafl_classes;
     \ %table;
@@ -212,35 +214,42 @@ sub text_filter { shift }
 sub escape_html { CGI::escapeHTML(shift) }
 
 ################################################################################
+package Spoon::Formatter::Container;
+use base 'Spoon::Formatter::Unit';
+sub contains_blocks {
+    $self->hub->formatter->all_blocks;
+}
+
+################################################################################
 package Spoon::Formatter::Block;
 use base 'Spoon::Formatter::Unit';
+sub contains_phrases {
+    $self->hub->formatter->all_phrases;
+}
 
 ################################################################################
 package Spoon::Formatter::Phrase;
 use base 'Spoon::Formatter::Unit';
 sub contains_phrases {
     my $id = $self->formatter_id;
-    [ grep {$_ ne $id} @{$self->all_phrases} ];
+    [ grep {$_ ne $id} @{$self->hub->formatter->all_phrases} ];
 }
-
-################################################################################
-package Spoon::Formatter::Token;
-use base 'Spoon::Formatter::Unit';
 
 ################################################################################
 package Spoon::Formatter::WaflBlock;
 use base 'Spoon::Formatter::Block';
 const formatter_id => 'wafl_block';
+const html_end => "</div>\n";
 field 'method';
 field 'arguments';
 
-sub text_filter {
-    '<div class="' . $self->method . '">' . (shift) . '</div>';
+sub html_start {
+    '<div class="' . $self->method . '">';
 }
 
 sub match {
     return unless
-      $self->text =~ /(?:^\.([\w\-]+)\s*\n)((?:.*\n)*?)(?:^\.(\1)\s*\n|\z)/m;
+      $self->text =~ /(?:^\.([\w\-]+)\ *\n)((?:.*\n)*?)(?:^\.\1\ *\n|\z)/m;
     $self->set_match($2);
     $self->method($1);
     my $class = $self->hub->formatter->wafl_table->{$self->method};
@@ -251,7 +260,7 @@ sub match {
 
 ################################################################################
 package Spoon::Formatter::WaflPhrase;
-use base 'Spoon::Formatter::Token';
+use base 'Spoon::Formatter::Unit';
 const formatter_id => 'wafl_phrase';
 const pattern_start =>
   qr/(^|(?<=[\s\-]))\{\w+(\s*:)?\s*.*?\}(?=[^A-Za-z0-9]|\z)/;

@@ -1,7 +1,7 @@
 package Spoon;
 use strict;
 use warnings;
-our $VERSION = '0.13';
+our $VERSION = '0.14';
 use Spiffy 0.16 ();
 use Spoon::Base '-Base';
 
@@ -13,17 +13,17 @@ sub paired_arguments { qw(-config_class) }
 
 sub load_hub {
     my ($args, @config_files) = $self->parse_arguments(@_);
-    my $config_class = $args->{config_class} || $self->config_class;
+    my $config_class = $args->{-config_class} || $self->config_class;
     eval "require $config_class";
-    die "Can't require $config_class:\n$@" if $@;
     my $config = $config_class->new(@config_files);
     my $hub_class = $config->hub_class;
-    eval qq{ require $hub_class }; die $@ if $@;
+    eval "require $hub_class";
     my $hub = $hub_class->new;
     $hub->config($config);
     $hub->init;
     $config->hub($hub);
     $hub->config_files(\@config_files);
+    $hub->main($self);
     $self->hub($hub);
     $self->init;
     no warnings;

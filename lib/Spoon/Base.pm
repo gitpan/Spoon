@@ -1,13 +1,11 @@
 package Spoon::Base;
 use strict;
 use warnings;
-use Spiffy 0.16 '-Base', ':XXX' , 'field';
-use IO::All 0.17 ();
-our @EXPORT = qw(io XXX);
+use Spiffy 0.16 '-Base';
+use IO::All 0.21 ();
+our @EXPORT = qw(io);
 
-# Indented to avoid $self ishness. Parens mess it up. Spiffy should remove the
-# parens in this case.
-    sub io { IO::All->new(@_) }
+sub io() { IO::All->new(@_) }
 
 field 'hub';
 field 'used_classes' => [];
@@ -19,16 +17,31 @@ sub new() {
     return $self;
 }
 
+sub use_cgi {
+    my $class = shift
+      or die "use_cgi requires a class name";
+    eval qq{require $class};
+    my $package = ref($self);
+    field -package => $package, 'cgi';
+    my $object = $class->new($self->hub);
+    $object->init;
+    $self->cgi($object);
+}
+
 sub use_class {
     my ($class_id) = @_;
     Carp::confess()  unless $self->hub;
     $self->hub->load_class($class_id);
-    my $package = caller;
+    my $package = ref($self);
     field -package => $package, $class_id;
     $self->$class_id($self->hub->$class_id);
     push @{$self->used_classes}, $class_id;
 }       
         
+sub is_in_cgi {
+    defined $ENV{GATEWAY_INTERFACE};
+}
+
 sub init { }
 sub pre_process { }
 sub post_process { }
@@ -58,30 +71,20 @@ sub cleanup {
     }
 }
 
-sub assert_dirpath {
-    my $dirpath = shift;
-    unless (-d $dirpath) {
-        mkdir($dirpath, 0755) or
-        do {
-            require File::Path;
-            File::Path::mkpath($dirpath);
-        } or
-        die "Can't make directory $dirpath";
-    }
-    return $dirpath;
-}
-
-sub assert_filepath {
-    my $filepath = shift;
-    my $dirpath = $filepath;
-    $dirpath =~ s/(.*\/).*/$1/;
-    $self->assert_dirpath($dirpath);
-}
-
 sub env_check {
     my $variable = shift;
     die "Environment variable '$variable' not set"
       unless defined $ENV{$variable};
+}
+
+sub dumper_to_file {
+    my $path = shift;
+    require Data::Dumper;
+    no warnings;
+    local $Data::Dumper::Indent = 1;
+    local $Data::Dumper::Terse = (@_ == 1) ? 1 : 0;
+    local $Data::Dumper::Sortkeys = 1;
+    Data::Dumper::Dumper(@_) > io($path);
 }
 
 # i18n stuff
@@ -92,8 +95,8 @@ sub use_utf8 {
     $use_utf8 = shift if @_;
     return $use_utf8 if defined($use_utf8);
     return($use_utf8 = 0) if $] < 5.008;
-    return 1 unless $self->config;
-    return($use_utf8 = (lc($self->config->encoding) =~ /^utf-?8$/));
+    return 1 unless $self->hub->config;
+    return($use_utf8 = (lc($self->hub->config->encoding) =~ /^utf-?8$/));
 }
 
 sub loc {
@@ -103,26 +106,26 @@ sub loc {
     return $i18n_class->loc(@_);
 }
 
-sub decode {
+sub utf8_decode {
     utf8::decode($_[0]) if $self->use_utf8 and defined $_[0];
     return $_[0] if defined wantarray;
 }
 
-sub encode {
+sub utf8_encode {
     utf8::encode($_[0]) if $self->use_utf8 and defined $_[0];
     return $_[0] if defined wantarray;
 }
 
-sub escape {
+sub uri_escape {
     my $data = shift;
-    $self->encode($data);
+    $self->utf8_encode($data);
     return CGI::Util::escape($data);
 }
 
-sub unescape {
+sub uri_unescape {
     my $data = shift;
     $data = CGI::Util::unescape($data);
-    $self->decode($data);
+    $self->utf8_decode($data);
     return $data;
 }
 

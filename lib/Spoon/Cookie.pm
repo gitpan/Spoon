@@ -1,24 +1,22 @@
 package Spoon::Cookie;
 use strict;
-use Spoon::Base '-base';
+use warnings;
+use Spoon::Base '-Base';
 use CGI qw(-no_debug);
 
 field 'preferences';
 field 'cookie_jar' => {};
 
 sub init {
-    my $self = shift;
     $self->use_class('config');
     $self->fetch();
 }
 
 sub header {
-    my ($self) = @_;
     CGI::header($self->header_values);
 }
 
 sub header_values {
-    my $self = shift;
     (
         $self->set_cookie_headers,
         -charset => $self->config->encoding,
@@ -35,14 +33,12 @@ sub content_type {
 }
 
 sub write {
-    my $self = shift;
     my ($cookie_name, $hash) = @_;
     require Storable;
     $self->cookie_jar->{$cookie_name} = $hash;
 }
 
 sub read {
-    my $self = shift;
     my $cookie_name = shift;
     my $cookie_jar = $self->cookie_jar;
     my $cookie = $cookie_jar->{$cookie_name};
@@ -51,7 +47,6 @@ sub read {
 }
 
 sub set_cookie_headers {
-    my $self = shift;
     my $cookie_jar = $self->cookie_jar;
     return () unless keys %$cookie_jar;
     my $cookies = [];
@@ -75,11 +70,11 @@ sub expiration {
 }
 
 sub fetch {
-    my ($self) = @_;
     require Storable;
     my $cookie_jar = { 
         map { 
-            ($_ => Storable::thaw(CGI::cookie($_))) 
+            my $object = eval { Storable::thaw(CGI::cookie($_)) };
+            $@ ? () : ($_ => $object) 
         } CGI::cookie() 
     };
     $self->cookie_jar($cookie_jar);

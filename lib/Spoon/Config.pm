@@ -31,11 +31,11 @@ sub add_config {
           unless $config =~ /\.(\w+)$/;
         my $extension = lc($1);
         my $method = "parse_$extension\_file";
-        $self->$method($config);
+        -f $config ? $self->$method($config) : {};
     };
     for my $key (keys %$hash) {
         field $key;
-        $self->$key($hash->{$key});
+        $self->{$key} = $hash->{$key};
     }
     if (defined (my $config_class = $hash->{config_class})) {
         eval qq{ require $config_class }; die $@ if $@;
@@ -74,7 +74,14 @@ sub parse_yaml {
 }
 
 sub default_config {
-    {
+    +{
+        $self->default_classes,
+        plugin_classes => [$self->default_plugin_classes],
+    }
+}
+
+sub default_classes {
+    (
         main_class => 'Spoon',
         hub_class => 'Spoon::Hub',
         config_class => 'Spoon::Config',
@@ -82,8 +89,10 @@ sub default_config {
         cgi_class => 'Spoon::CGI',
         formatter_class => 'Spoon::Formatter',
         template_class => 'Spoon::Template',
-    }
+    )
 }
+
+sub default_plugin_classes { () }
 
 1;
 

@@ -1,5 +1,6 @@
 package Spoon::Plugin;
 use strict;
+use warnings;
 use Spoon::Base '-Base';
 
 sub class_id {

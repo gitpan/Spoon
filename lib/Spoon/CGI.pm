@@ -1,33 +1,62 @@
 package Spoon::CGI;
 use strict;
 use warnings;
-use Spoon '-base';
-use CGI;
-our @EXPORT = qw(cgi_field);
+use Spoon '-Base';
+use CGI qw(-no_debug -nosticky);
+our @EXPORT = qw(cgi);
+
+my $all_params_by_class = {};
 
 const class_id => 'cgi';
 
-sub all {
-    my ($self) = @_;
-    return (
-        CGI::Vars(),
-    );
-}
-
-sub cgi_field {
+sub cgi() {
     my $package = caller;
-    my $field = shift;
+    my ($field, @flags);
+    for (@_) {
+        (push @flags, $1), next if /^-(\w+)$/;
+        $field ||= $_;
+    }
+    push @{$all_params_by_class->{$package}}, $field;
     no strict 'refs';
-    return if defined &{"${package}::$field"};
-    *{"${package}::$field"} = 
-    sub { 
+    no warnings;
+    *{"$package\::$field"} = @flags 
+    ? sub {
         my $self = shift;
-        $self->cgi->get_raw($field);
-    };
+        die "Setting CGI params not implemented" if @_;
+        my $param = $self->_get_raw($field);
+        for my $flag (@flags) {
+            my $method = "_$flag\_filter";
+            $self->$method($param);
+        }
+        return $param;
+    } 
+    : sub { 
+        my $self = shift;
+        die "Setting CGI params not implemented" if @_;
+        $self->_get_raw($field);
+    } 
 }
 
-sub get_raw {
-    my $self = shift;
+sub add_params {
+    my $class = ref($self);
+    push @{$all_params_by_class->{$class}}, @_;
+}
+
+sub defined {
+    my $param = shift;
+    defined CGI::param($param);
+}
+
+sub all {
+    my $class = ref($self);
+    map { ($_, scalar $self->$_) } @{$all_params_by_class->{$class}};
+}
+
+sub vars {
+    CGI::Vars();
+}
+
+sub _get_raw {
     my $field = shift;
     if (@_) {
         $self->{$field} = shift;
@@ -41,6 +70,16 @@ sub get_raw {
       : defined $values[0]
         ? $values[0]
         : ''; 
+}
+
+sub _trim_filter {
+    $_[0] =~ s/^\s*(.*?)\s*$/$1/mg;
+    $_[0] =~ s/\s+/ /g;
+}
+
+sub _newlines_filter {
+    $_[0] =~ s/\015\012/\n/g;
+    $_[0] =~ s/\015/\n/g;
 }
 
 1;

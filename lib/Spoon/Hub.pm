@@ -1,9 +1,11 @@
 package Spoon::Hub;
 use strict;
+use warnings;
 use Spoon::Base '-Base';
 
 const class_id => 'hub';
 const action => '_default_';
+field 'main';
 field 'config';
 field 'registry';
 field 'config_files' => [];
@@ -80,7 +82,7 @@ sub create_class_object {
     my ($class_name, $class_id) = @_;
     die "No class defined for class_id '$class_id'"
       unless $class_name;
-    eval qq{ require $class_name }; die "require $class_name $@" if $@;
+    eval qq{ require $class_name };
     my $object = $class_name->new($self);
     push @{$self->loaded_objects}, $object;
     $class_id ||= $object->class_id;

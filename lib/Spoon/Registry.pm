@@ -4,6 +4,7 @@ use warnings;
 use Spoon '-Base';
 
 const class_id => 'registry';
+const registry_file => 'registry.dd';
 field 'lookup';
 
 sub init {
@@ -15,7 +16,7 @@ sub plugin_directory {
 }
 
 sub registry_path {
-    $self->plugin_directory . '/registry.dd';
+    join '/', $self->plugin_directory, $self->registry_file; 
 }
 
 sub load {
@@ -43,7 +44,7 @@ sub update {
         my $class_id = $object->class_id
           or die "No class_id for $class_name\n";
         $lookup->{classes}{$class_id} = $class_name;
-        $object->register;
+        $object->register($self);
     }
     $self->write;
     $self->lookup(bless $self->lookup, $self->lookup_class);
