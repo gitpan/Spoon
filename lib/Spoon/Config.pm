@@ -12,7 +12,9 @@ sub default_configs { return }
 sub new() {
     my $class = shift;
     my $self = bless {}, $class;
-    my (@configs) = @_ ? @_ : $self->default_configs;
+    my (@configs) = map {
+        /\*/ ? (sort glob) : ($_)
+    } @_ ? @_ : $self->default_configs;
     $self->add_config($self->default_config, 1);
     for my $config (@configs) {
         $self->rebless($self->add_config($config));
@@ -53,7 +55,7 @@ sub hash_from_file {
     my $extension = lc("$1"); # quotes fix 5.8.0 perl bug
     my $method = "parse_${extension}_file";
     -f $config ? $self->$method($config) : {};
-};
+}
 
 sub parse_file {
     $self->parse_yaml_file(@_);
@@ -91,12 +93,14 @@ sub default_config {
 
 sub default_classes {
     (
-        main_class => 'Spoon',
-        hub_class => 'Spoon::Hub',
-        config_class => 'Spoon::Config',
-        registry_class => 'Spoon::Registry',
         cgi_class => 'Spoon::CGI',
+        config_class => 'Spoon::Config',
         formatter_class => 'Spoon::Formatter',
+        headers_class => 'Spoon::Headers',
+        hooks_class => 'Spoon::Hooks',
+        hub_class => 'Spoon::Hub',
+        main_class => 'Spoon',
+        registry_class => 'Spoon::Registry',
         template_class => 'Spoon::Template',
     )
 }

@@ -18,5 +18,5 @@ my @classes = grep {
 } keys %config;
 
 for my $class (@classes) {
-    ok($hub->load_class($class));
+    ok($hub->$class);
 }

@@ -22,7 +22,7 @@ sub get {
 
 sub value {
     (
-        $self->hub->load_class('cookie')->set_cookie_headers,
+        $self->hub->cookie->set_cookie_headers,
         -charset => $self->charset,
         -type => $self->content_type,
         -expires => $self->expires,

@@ -43,7 +43,7 @@ use Spoon;
 
     foreach my $key (keys %classes) {
         (my $id = $key) =~ s/_class$//;
-        my $object = $hub->load_class($id);
+        my $object = $hub->$id;
 
         memory_cycle_ok($hub, 'check for cycles in Spoon::Hub object');
         memory_cycle_ok($object, "check for cycles in $classes{$key} object");

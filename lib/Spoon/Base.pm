@@ -1,31 +1,20 @@
 package Spoon::Base;
-use Spiffy 0.21 -Base;
+use Spiffy 0.22 -Base;
 use Spiffy qw(-XXX -yaml);
 # WWW - Creating a wrapper sub to require() IO::All caused spurious segfaults
 use IO::All 0.32;
-our @EXPORT = qw(io hook trace);
+our @EXPORT = qw(io trace);
 our @EXPORT_OK = qw(conf);
 
 sub init { }
-sub pre_process { }
-sub post_process { }
 
-field 'used_classes' => [];
+field used_classes => [];
 field 'encoding';
 field hub => -weak;
 const plugin_base_directory => './plugin';
 
 sub assert {
     die "Assertion failed" unless shift;
-}
-
-sub hook() {
-    require Spoon::Hook;
-    no warnings;
-    *hook = sub {
-        Spoon::Hook->hook(@_);
-    };
-    goto &hook;
 }
 
 sub trace() {
@@ -62,7 +51,7 @@ sub use_class {
     my ($class_id) = @_;
     Carp::confess("No hub in '$class_id' object")  
       unless $self->hub;
-    my $object = $self->hub->load_class($class_id);
+    my $object = $self->hub->$class_id;
     my $package = ref($self);
     field -package => $package, $class_id;
     $self->$class_id($self->hub->$class_id);
@@ -183,7 +172,7 @@ sub uri_unescape {
     return $data;
 }
 
-# The CGI.pm version is broken in Chinese
+# WWW - The CGI.pm version is broken in Chinese
 sub html_escape {
     my $val = shift;
     $val =~ s/&/&#38;/g;
@@ -208,6 +197,14 @@ sub base64_encode {
 sub base64_decode {
     require MIME::Base64;
     MIME::Base64::decode_base64(@_);
+}
+
+# XXX Move to IO::All. Make more robust. Use Damian's prompting module.
+package IO::All;
+
+sub prompt {
+    print shift;
+    io('-')->chomp->getline;
 }
 
 __END__

@@ -3,6 +3,8 @@ use Spoon::DataObject -Base;
 
 stub 'content';
 stub 'metadata';
+const is_readable => 1;
+const is_writable => 1;
 
 sub force {
     if (@_) {
@@ -32,6 +34,20 @@ sub active {
     return $self->exists && not $self->deleted;
 }
 
+sub assert_readable {
+    if (not $self->is_readable) {
+        my $id = $self->id;
+        die "$id is not readable";
+    }
+}
+
+sub assert_writable {
+    if (not $self->is_writable) {
+        my $id = $self->id;
+        die "$id is not writable";
+    }
+}
+
 sub load {
     $self->load_content;
     $self->load_metadata;
@@ -39,6 +55,7 @@ sub load {
 }
 
 sub load_content {
+    $self->assert_readable;
     my $content = $self->active
     ? io($self->file_path)->utf8->all
     : '';
@@ -54,6 +71,7 @@ sub load_metadata {
 }
 
 sub store {
+    $self->assert_writable;
     $self->store_content or return;
     $self->store_metadata;
     return if $self->force;

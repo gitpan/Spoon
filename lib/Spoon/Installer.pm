@@ -172,7 +172,7 @@ sub compress_lib {
             +{ "${class_id}_class" => $class_name }
         );
         warn "Compressing $class_name\n" unless $self->quiet;
-        $self->hub->load_class($class_id)->compress_files($source_dir);
+        $self->hub->$class_id->compress_files($source_dir);
     }
     grep {
         my $name = $_;

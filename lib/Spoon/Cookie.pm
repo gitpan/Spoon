@@ -6,6 +6,7 @@ field 'jar' => {};
 const expires => '+5y';
 const path => '/';
 const prefix => 'Spoon-';
+const domain => '';
 
 sub init {
     $self->use_class('config');
@@ -37,6 +38,7 @@ sub set_cookie_headers {
             -value => Storable::freeze($jar->{$_} || {}),
             -path => $self->path,
             -expires => $self->expires,
+            -domain => $self->domain,
         );
     } keys %$jar;
     return @$cookies ? (-cookie => $cookies) : ();

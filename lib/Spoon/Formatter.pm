@@ -37,7 +37,7 @@ sub create_wafl_table {
 }
 
 sub add_external_wafl {
-    return unless defined $self->hub->registry;
+    return unless $self->hub->registry_loaded;
     my $table = shift;
     my $map = $self->hub->registry->lookup->wafl;
     for my $wafl_id (keys %$map) {
@@ -274,7 +274,9 @@ sub match {
     return unless
       $self->text =~ /(?:^\.([\w\-]+)\ *\n)((?:.*\n)*?)(?:^\.\1\ *\n|\z)/m;
     $self->set_match($2);
-    $self->method($1);
+    my $method = lc $1;
+    $method =~ s/-/_/g;
+    $self->method($method);
     $self->matched($2);
     $self->bless_wafl_class;
 }
@@ -289,7 +291,7 @@ use base 'Spoon::Formatter::Wafl';
 use base 'Spoon::Formatter::Unit';
 const formatter_id => 'wafl_phrase';
 const pattern_start =>
-  qr/(^|(?<=[\s\-]))\{\w+(\s*:)?\s*.*?\}(?=[^A-Za-z0-9]|\z)/;
+  qr/(^|(?<=[\s\-]))\{[\w-]+(\s*:)?\s*.*?\}(?=[^A-Za-z0-9]|\z)/;
 field 'method';
 field 'arguments';
 
@@ -301,7 +303,9 @@ sub match_phrase {
     return unless super;
     return unless $self->matched =~ /^\{([\w\-]+)(?:\s*\:)?\s*(.*)\}$/;
     $self->arguments($2);
-    $self->method($1);
+    my $method = lc $1;
+    $method =~ s/-/_/g;
+    $self->method($method);
     $self->bless_wafl_class;
 }
 

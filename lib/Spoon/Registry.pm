@@ -14,6 +14,12 @@ sub registry_path {
     join '/', $self->registry_directory, $self->registry_file; 
 }
 
+sub load_dynamic {
+    $self->update;
+    $self->lookup(bless $self->lookup, $self->lookup_class);
+    return $self->lookup;
+}
+
 sub load {
     return $self->lookup 
       if defined $self->lookup and
@@ -149,6 +155,7 @@ sub transform_hook {
 package Spoon::Lookup;
 use Spiffy -base;
 
+# XXX consider an AUTOLOAD here.
 field action => {};
 field add_order => {};
 field classes => {};
