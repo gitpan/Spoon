@@ -12,11 +12,15 @@ sub init {
 
 sub text_to_html {
     my $self = shift;
+    $self->text_to_parsed(@_)->to_html;
+}
+
+sub text_to_parsed {
+    my $self = shift;
     my $text = shift;
     my $block = $self->top_class->new($self->hub);
     $block->text($text);
     $block->parse;
-    $block->to_html;
 }
 
 package Spoon::Formatter::Unit;
@@ -44,6 +48,7 @@ sub parse {
         $self->end_offset(0);
         $self->parse_phrases;
     }
+    return $self;
 }
     
 sub parse_blocks {
@@ -171,11 +176,13 @@ sub escape_html {
     $text;
 }
 
-# package Spoon::Formatter::Phrase;
-# use base 'Spoon';
-# field stub 'html_start';
-# field stub 'html_end';
-# field contains_phrases => [];
+package Spoon::WAFL::Block;
+use base 'Spoon::Formatter::Unit';
+field const formatter_id => 'wafl_block';
+
+package Spoon::WAFL::Phrase;
+use base 'Spoon::Formatter::Unit';
+field const formatter_id => 'wafl_phrase';
 
 1;
 

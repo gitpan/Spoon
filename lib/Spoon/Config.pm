@@ -50,6 +50,12 @@ sub parse_yaml_file {
       or die "Can't open $file for input:\n$!";
     my $yaml = do {local $/; <CONFIG>};
     close CONFIG;
+    $self->parse_yaml($yaml);
+}
+
+sub parse_yaml {
+    my $self = shift;
+    my $yaml = shift;
     my $hash = {};
     my $latest_key = '';
     for (split /\n/, $yaml) {

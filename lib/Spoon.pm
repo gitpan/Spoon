@@ -2,7 +2,7 @@ package Spoon;
 use strict;
 use warnings;
 use Spiffy '-base';
-our $VERSION = '0.10';
+our $VERSION = '0.11';
 
 field const class_id => 'main';
 field const config_class => 'Spoon::Config';
@@ -26,6 +26,7 @@ sub load_hub {
     my $hub_class = $config->hub_class;
     eval qq{ require $hub_class }; die $@ if $@;
     my $hub = $hub_class->new($config);
+    $config->hub($hub);
     $hub->config_files(\@config_files);
     $self->hub($hub);
     return $hub;
@@ -42,6 +43,24 @@ sub use_class {
 }       
         
 sub init { }
+
+my $global_die;
+sub debug {
+    my $self = shift;
+    my $level = shift || 1;
+    if ($level == 0) {
+        *CORE::GLOBAL::die = $self->global_die
+          if $self->global_die;
+    }
+    elsif ($level == 1) {
+        *CORE::GLOBAL::die =
+          sub { require Carp; goto &Carp::confess };
+    }
+    else {
+        die "Undefined debug level '$level'";
+    }
+    return $self;
+}
 
 1;
 

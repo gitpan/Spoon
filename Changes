@@ -1,4 +1,10 @@
 ---
+version: 0.11
+date:    Sun Mar 21 12:45:18 PST 2004
+changes:
+- Added Spoon::debug
+- Added Spoon::Installer
+---
 version: 0.10
 date:    Sun Mar 21 01:58:22 PST 2004
 changes:

@@ -11,14 +11,15 @@ field include_path => [];
 sub init {
     my $self = shift;
     $self->use_class('config');
-    $self->use_class('cgi');
+    $self->use_class('cgi')
+      if $ENV{GATEWAY_INTERFACE};
 }
 
 sub all {
     my $self = shift;
     return ( 
         $self->config->all,
-        $self->cgi->all,
+        $ENV{GATEWAY_INTERFACE} ? ($self->cgi->all) : (),
     );
 }
 
@@ -56,7 +57,7 @@ sub render {
     my $t = Template->new({
         %$directives,
         INCLUDE_PATH => $include_path,
-        PLUGINS => $self->hub->plugins->template_lookup,
+        PLUGINS => $self->plugins,
         OUTPUT => \$output,
         TOLERANT => 0,
     });
@@ -71,6 +72,11 @@ sub get_include_path {
     my $self = shift;
     my $include_path = $self->include_path;
     @$include_path ? $include_path : $self->default_include_path;
+}
+
+sub plugins {
+    my $self = shift;
+    $self->hub->registry->template_lookup;
 }
 
 1;
