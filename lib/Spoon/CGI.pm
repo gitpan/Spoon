@@ -72,6 +72,10 @@ sub _get_raw {
         : ''; 
 }
 
+sub _utf8_filter {
+    $self->utf8_decode($_[0]);
+}
+
 sub _trim_filter {
     $_[0] =~ s/^\s*(.*?)\s*$/$1/mg;
     $_[0] =~ s/\s+/ /g;

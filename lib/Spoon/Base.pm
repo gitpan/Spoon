@@ -1,8 +1,8 @@
 package Spoon::Base;
 use strict;
 use warnings;
-use IO::All 0.22 ();
-use Spiffy 0.18 '-Base';
+use IO::All 0.30 ();
+use Spiffy 0.19 '-Base';
 our @EXPORT = qw(io);
 
 sub io() { IO::All->new(@_) }
@@ -13,6 +13,7 @@ sub post_process { }
 
 field 'hub';
 field 'used_classes' => [];
+field 'encoding';
 
 sub new() {
     my $class = shift;
@@ -91,28 +92,23 @@ sub dumper_to_file {
     local $Data::Dumper::Indent = 1;
     local $Data::Dumper::Terse = (@_ == 1) ? 1 : 0;
     local $Data::Dumper::Sortkeys = 1;
-    Data::Dumper::Dumper(@_) > io($path);
+    io($path)->assert->print(Data::Dumper::Dumper(@_));
 }
 
-# i18n stuff
-field 'encoding';
-
+# Codecs and Escaping
 my $use_utf8;
 sub use_utf8 {
     $use_utf8 = shift if @_;
     return $use_utf8 if defined($use_utf8);
-    return($use_utf8 = 0) if $] < 5.008;
-    return 1 unless $self->hub->config;
-    return
-      ($use_utf8 = (lc($self->hub->config->character_encoding) =~ /^utf-?8$/));
+    $use_utf8 = $] < 5.008 ? 0 : 1;
 }
 
-sub loc {
-    my $i18n_class = $self->hub->config->i18n_class or die;
-    eval "use $i18n_class; 1" or return $_[0];
-    $i18n_class->initialize($self->use_utf8 || 0);
-    return $i18n_class->loc(@_);
-}
+# sub loc {
+#     my $i18n_class = $self->hub->config->i18n_class or die;
+#     eval "use $i18n_class; 1" or return $_[0];
+#     $i18n_class->initialize($self->use_utf8 || 0);
+#     return $i18n_class->loc(@_);
+# }
 
 sub utf8_decode {
     utf8::decode($_[0]) if $self->use_utf8 and defined $_[0];
@@ -137,8 +133,17 @@ sub uri_unescape {
     return $data;
 }
 
-sub html_escape { 
-    CGI::escapeHTML(shift);
+# The CGI.pm version is broken in Chinese
+sub html_escape {
+    my $val = shift;
+    $val =~ s/&/&#38;/g;
+    $val =~ s/</&lt;/g; 
+    $val =~ s/>/&gt;/g;
+    $val =~ s/\(/&#40;/g;
+    $val =~ s/\)/&#41;/g;
+    $val =~ s/"/&#34;/g;
+    $val =~ s/'/&#39;/g;
+    return $val;
 }
 
 sub html_unescape { 

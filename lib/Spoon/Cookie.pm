@@ -19,7 +19,7 @@ sub header {
 sub header_values {
     (
         $self->set_cookie_headers,
-        -charset => $self->config->character_encoding,
+        -charset => 'UTF-8',
         $self->content_type,
         -expires => 'now',
         -pragma => 'no-cache',

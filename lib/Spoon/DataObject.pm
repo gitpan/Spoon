@@ -6,6 +6,12 @@ use Spoon::Base '-base';
 stub 'class_id';
 field 'id';
 
+sub name {
+    my $self->{name} = shift if @_;
+    return $self->{name} if defined $self->name;
+    $self->{name} = $self->uri_unescape($self->id);
+}
+
 sub new {
     my $class = shift;
     my $self = bless {}, $class;

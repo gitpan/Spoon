@@ -6,11 +6,10 @@ use Spoon '-Base';
 const class_id => 'registry';
 const registry_file => 'registry.dd';
 const registry_directory => '.';
-field 'lookup';
+const lookup_class => 'Spoon::Lookup';
 
-sub init {
-    $self->use_class('config');
-}
+field 'lookup';
+field 'current_class_id';
 
 sub registry_path {
     join '/', $self->registry_directory, $self->registry_file; 
@@ -22,52 +21,34 @@ sub load {
     my $lookup = eval ${io $path}; die "$@" if $@;
     die "$path seems to be corrupt:\n$@" if $@;
     $self->lookup(bless $lookup, $self->lookup_class);
-    die "$path out of date. Try running 'index.cgi --plugins'\n"
-      if $self->out_of_date;
     return 1;
-}
-
-# XXX Needs to be real
-sub out_of_date {
-    return 0;
 }
 
 sub update {
     my $lookup = {};
     $self->lookup($lookup);
-    for my $class_name (@{$self->config->plugin_classes}) {
+    for my $class_name (@{$self->hub->config->plugin_classes}) {
         eval "require $class_name"; die $@ if $@;
         my $object = $class_name->new($self->hub);
         my $class_id = $object->class_id
           or die "No class_id for $class_name\n";
+        $self->current_class_id($class_id);
         $lookup->{classes}{$class_id} = $class_name;
         $object->register($self);
     }
     $self->write;
-    $self->lookup(bless $self->lookup, $self->lookup_class);
+    $self->load;
     return 1;
 }
 
 sub add {
     my $key = shift;
     my $value = shift;
-    $self->lookup->{$key}{$value} = [ caller()->class_id, @_ ];
+    $self->lookup->{$key}{$value} = [ $self->current_class_id, @_ ];
 }
 
 sub write {
-    my $path = $self->registry_path;
-    require Data::Dumper;
-    { 
-        no warnings;
-        $Data::Dumper::Indent = 1;
-        $Data::Dumper::Terse = 1;
-        $Data::Dumper::Sortkeys = 1;
-    }
-    Data::Dumper::Dumper($self->lookup) > io($path);
-}
-
-sub lookup_class {
-    'Spoon::Lookup';
+    $self->dumper_to_file($self->registry_path, $self->lookup);
 }
 
 package Spoon::Lookup;

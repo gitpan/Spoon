@@ -1,4 +1,9 @@
 ---
+version: 0.17
+date:    Fri Jul 16 23:42:53 PDT 2004
+changes:
+- Use only the UTF8 character encoding
+---
 version: 0.16
 date:    Tue Jun 22 10:14:45 PDT 2004
 changes:

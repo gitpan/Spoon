@@ -13,7 +13,6 @@ sub render {
     my $t = Template->new({
         %$directives,
         INCLUDE_PATH => $self->path,
-        PLUGINS => $self->plugins,
         OUTPUT => \$output,
         TOLERANT => 0,
     });
@@ -22,10 +21,6 @@ sub render {
     };
     die "Template Toolkit error:\n$@" if $@;
     return $output;
-}
-
-sub plugins {
-    $self->hub->registry->lookup->classes;
 }
 
 1;

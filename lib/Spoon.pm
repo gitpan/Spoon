@@ -1,7 +1,7 @@
 package Spoon;
 use strict;
 use warnings;
-our $VERSION = '0.16';
+our $VERSION = '0.17';
 use Spoon::Base '-Base';
 
 const class_id => 'main';

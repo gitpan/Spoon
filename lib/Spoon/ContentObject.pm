@@ -34,7 +34,7 @@ sub load {
 
 sub load_content {
     my $content = $self->active
-    ? io($self->file_path)->scalar
+    ? io($self->file_path)->utf8->all
     : '';
     $self->content($content);
     return $self;
@@ -59,9 +59,9 @@ sub store_content {
         $content =~ s/\r//g;
         $content =~ s/\n*\z/\n/;
     }
-    my $file = io->file($self->file_path);
-    return if -f $self->file_path and      #XXX $file->exists
-              $content eq $file->scalar;
+    my $file = io->file($self->file_path)->utf8;
+    return if $file->exists and 
+              $content eq $file->all;
     $file->print($content);
     return $self;
 }

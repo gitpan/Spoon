@@ -42,7 +42,6 @@ sub preload {
         my %hash = @{$preload->{$_}}[1..$#{$preload->{$_}}];
         [$_, $hash{priority} || 0];
     } keys %$preload;
-    
 }
 
 sub add_post_process {

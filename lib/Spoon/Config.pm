@@ -52,7 +52,7 @@ sub parse_file {
 
 sub parse_yaml_file {
     my $file = shift;
-    $self->parse_yaml(io($file)->scalar);
+    $self->parse_yaml(io($file)->all);
 }
 
 sub parse_yaml {

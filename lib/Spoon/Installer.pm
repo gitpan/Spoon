@@ -1,9 +1,9 @@
 package Spoon::Installer;
 use strict;
 use warnings;
-use Spoon::Base '-Base';
+# use Spoon::Base '-selfless', 'const';
+use Spiffy '-Base'; use IO::All; #XXX migrate to non-spiffy class
 
-const class_id => 'installer';
 const extract_to => '.';
 
 sub compress_from {
@@ -21,12 +21,13 @@ sub extract_files {
             warn "  Skipping $file (already exists)\n";
             next;
         }
-        if (-f $file_path and $file->scalar eq $file_contents) {
+        my $content = $self->set_file_content($file_path, $file_contents);
+        if ($file->exists and $file->all eq $content) {
             warn "  Skipping $file (unchanged)\n";
             next;
         }
         warn "  - $file\n";
-        $self->set_file_content($file_path, $file_contents);
+        $file->assert->print($content);
     }
 }
 
@@ -37,7 +38,7 @@ sub set_file_content {
       if $path =~ /\.(gif|jpg|png)$/;
     $content = $self->fix_hashbang($content)
       if $path =~ /\.(pl|cgi)$/;
-    io($path)->assert->print($content);
+    return $content;
 }
 
 sub fix_hashbang {
@@ -86,14 +87,14 @@ sub compress_files {
     my $module = ref($self) . '.pm';
     $module =~ s/::/\//g;
     my $module_path = $INC{$module} or die;
-    my $module_text = io($module_path)->scalar;
+    my $module_text = io($module_path)->all;
     my ($module_code) = split /^__\Q$first_file\E__\n/m, $module_text;
     ($module_code . $new_pack) > io($module_path);
 }
 
 sub get_file_content {
     my $path = shift;
-    my $content = io($path)->scalar;
+    my $content = io($path)->all;
     $content = $self->base64_encode($content)
       if $path =~ /\.(gif|jpg|png)$/;
     $content = $self->unfix_hashbang($content)
@@ -128,8 +129,8 @@ sub compress_lib {
     grep {
         my $name = $_;
         eval "require $name";
-        UNIVERSAL::isa($name, 'Spoon::Installer')
-          and $name !~ /::(Installer|Theme)$/; #XXX
+        UNIVERSAL::can($name, 'compress_files')
+          and $name !~ /::(Installer)$/;
     } map {
         my $name = $_->name;
         $name =~ s/^lib\/(.*)\.pm$/$1/;
