@@ -1,4 +1,9 @@
 ---
+version: 0.16
+date:    Tue Jun 22 10:14:45 PDT 2004
+changes:
+- Support locked files in Installer
+---
 version: 0.15
 date:    Sun Jun 20 20:32:01 PDT 2004
 changes:

@@ -14,7 +14,18 @@ sub extract_files {
     my @files = $self->get_packed_files;
     while (@files) {
         my ($file_name, $file_contents) = splice(@files, 0, 2);
+        my $locked = $file_name =~ s/^!//;
         my $file_path = join '/', $self->extract_to, $file_name;
+        my $file = io->file($file_path)->assert;
+        if ($locked and -f $file_path) {
+            warn "  Skipping $file (already exists)\n";
+            next;
+        }
+        if (-f $file_path and $file->scalar eq $file_contents) {
+            warn "  Skipping $file (unchanged)\n";
+            next;
+        }
+        warn "  - $file\n";
         $self->set_file_content($file_path, $file_contents);
     }
 }
@@ -62,12 +73,15 @@ sub compress_files {
     my $directory = $self->compress_from;
     while (@files) {
         my ($file_name, $file_contents) = splice(@files, 0, 2);
+        my $locked = $file_name =~ s/^!// ? '!' : '';
         my $source_path = 
           File::Spec->canonpath("$source_dir/$directory/$file_name");
         die "$file_name does not exist as $source_path" 
           unless -f $source_path;
-        my $content = $self->get_file_content($source_path);
-        $new_pack .= "__${file_name}__\n$content";
+        my $content = $locked 
+        ? $file_contents
+        : $self->get_file_content($source_path);
+        $new_pack .= "__$locked${file_name}__\n$content";
     }
     my $module = ref($self) . '.pm';
     $module =~ s/::/\//g;
