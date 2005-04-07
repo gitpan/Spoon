@@ -1,4 +1,9 @@
 ---
+version: 0.23
+date:    Mon Apr  4 09:11:51 PDT 2005
+changes:
+- Makefile.PL was missing :(
+---
 version: 0.22
 date:    Mon Apr  4 03:15:32 PDT 2005
 changes:

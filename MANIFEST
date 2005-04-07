@@ -3,6 +3,7 @@ inc/Module/Install.pm
 inc/Module/Install/Base.pm
 inc/Module/Install/Can.pm
 inc/Module/Install/Fetch.pm
+inc/Module/Install/Makefile.pm
 inc/Module/Install/Metadata.pm
 inc/Module/Install/Win32.pm
 inc/Module/Install/WriteAll.pm
@@ -27,6 +28,7 @@ lib/Spoon/Template.pm
 lib/Spoon/Template/TT2.pm
 lib/Spoon/Trace.pm
 lib/Spoon/Utils.pm
+Makefile.PL
 MANIFEST			This list of files
 META.yml
 README

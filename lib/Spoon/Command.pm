@@ -12,6 +12,7 @@ sub process {
     my $action = $self->get_action(shift(@values))
       or return $self->default_action;
     $action->(@values);
+    return $self;
 }
 
 sub get_action {

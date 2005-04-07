@@ -1,6 +1,6 @@
 package Spoon;
 use Spoon::Base -Base;
-our $VERSION = '0.22';
+our $VERSION = '0.23';
 
 const class_id => 'main';
 
