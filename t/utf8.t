@@ -3,7 +3,11 @@ use strict;
 use warnings;
 use Test::More;
 
-use Encode;
+eval "use Encode";
+if($@) {
+	plan skip_all => "Encode not installed.";
+}
+
 use Spoon::Base;
 
 plan tests => 5;

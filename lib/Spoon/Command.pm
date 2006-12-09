@@ -9,8 +9,8 @@ sub process {
     my ($args, @values) = $self->parse_arguments(@_);
     $self->quiet(1)
       if $args->{-q} || $args->{-quiet};
-    my $action = $self->get_action(shift(@values))
-      or return $self->default_action;
+    my $action = $self->get_action(shift(@values)) ||
+                 sub { $self->default_action(@_) };
     $action->(@values);
     return $self;
 }

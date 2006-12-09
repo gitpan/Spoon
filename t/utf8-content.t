@@ -3,7 +3,9 @@ use strict;
 use warnings;
 use Test::More;
 
-use Encode;
+eval "use Encode";
+my $enc = ! $@;
+
 use Spoon::ContentObject;
 
 plan tests => 8;
@@ -27,7 +29,11 @@ my $database_directory;
     my $object = Spoon::ContentObject->new(id => 'test1');
     $object->load_content;
 
-    ok( Encode::is_utf8( $object->content ), 'object content is utf8' );
+    SKIP: {
+        skip "Encode not installed", 1  unless($enc);
+        ok( Encode::is_utf8( $object->content ), 'object content is utf8' );
+    }
+
     is( $object->content, "This file has no utf8 in it.\n",
         'test content was loaded' );
 
@@ -38,8 +44,10 @@ my $database_directory;
     $object->store_content;
 
     $object->load_content;
-
-    ok( Encode::is_utf8( $object->content ), 'object content is utf8 after save/load' );
+    SKIP: {
+        skip "Encode not installed", 1  unless($enc);
+        ok( Encode::is_utf8( $object->content ), 'object content is utf8 after save/load' );
+    }
     is( $object->content, "This file has no utf8 in it.\n",
         'test content was loaded after save/load' );
 }
@@ -50,7 +58,11 @@ my $database_directory;
     my $object = Spoon::ContentObject->new(id => 'test2');
     $object->load_content;
 
-    ok( Encode::is_utf8( $object->content ), 'object content is utf8' );
+    SKIP: {
+        skip "Encode not installed", 1  unless($enc);
+        ok( Encode::is_utf8( $object->content ), 'object content is utf8' );
+    }
+
     is( $object->content, "This file has utf8 in it - \x{16A0}\x{16C7}\x{16BB}.\n",
         'test content was loaded' );
 
@@ -62,7 +74,11 @@ my $database_directory;
 
     $object->load_content;
 
-    ok( Encode::is_utf8( $object->content ), 'object content is utf8 after save/load' );
+    SKIP: {
+        skip "Encode not installed", 1  unless($enc);
+        ok( Encode::is_utf8( $object->content ), 'object content is utf8 after save/load' );
+    }
+
     is( $object->content, "This file has utf8 in it - \x{16A0}\x{16C7}\x{16BB}.\n",
         'test content was loaded after save/load' );
 }

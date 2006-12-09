@@ -1,6 +1,6 @@
 package Spoon;
 use Spoon::Base -Base;
-our $VERSION = '0.23';
+our $VERSION = '0.24';
 
 const class_id => 'main';
 
@@ -54,11 +54,12 @@ framework is heavily used.)
 
 =head1 AUTHOR
 
-Brian Ingerson <INGY@cpan.org>
+Ingy döt Net <ingy@cpan.org>
 
 =head1 COPYRIGHT
 
 Copyright (c) 2004. Brian Ingerson. All rights reserved.
+Copyright (c) 2006. Ingy döt Net. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

@@ -1,4 +1,14 @@
 ---
+version: 0.24
+date:    Wed Aug 30 10:45:22 PDT 2006
+changes:
+- Include Time::HiRes dependency into Makefile.PL (RT #19291)
+- Include URI and DB_File dependency into Makefile.PL (RT #15036)
+- Upgraded to Module::Install 0.64
+- Added File::Spec path name portability fixes all over the place.
+- Incorporated parts of Barbie's patch to fix tests on Win32 Perl 5.6
+  (RT #17506)
+---
 version: 0.23
 date:    Mon Apr  4 09:11:51 PDT 2005
 changes:

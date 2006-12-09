@@ -2,7 +2,7 @@ package Spoon::Hub;
 use Spoon::Base -Base;
 
 const class_id => 'hub';
-const action => '_default_';
+field action => '_default_';
 
 field main => -weak;
 field config_files => [];
@@ -68,8 +68,10 @@ sub load_class {
 
     Carp::confess "No class defined for class_id '$class_id'"
       unless $class_name;
-    eval "require $class_name" unless $class_name->can('new');
-    die $@ if $@;
+    unless ($class_name->can('new')) {
+        eval "require $class_name";
+        die $@ if $@;
+    }
     $self->add_hooks
       unless $class_id eq 'hooks';
     my $object = $class_name->new

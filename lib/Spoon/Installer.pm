@@ -1,6 +1,7 @@
 package Spoon::Installer;
 use Spiffy -Base; 
-use IO::All; #XXX migrate to non-spiffy class
+use IO::All;
+use Spoon::Base -mixin => qw(hub);
 
 const extract_to => '.';
 field quiet => 0;
@@ -106,7 +107,7 @@ sub get_local_packed_files {
     my @return;
     my $class = ref $self;
     my $data = $self->data($class)
-      or next;
+      or return;
     my @files = split /^__(.+)__\n/m, $data;
     shift @files;
     while (@files) {
@@ -184,7 +185,7 @@ sub strip_html {
 
 sub compress_lib {
     die "Must be run from the module source code directory\n"
-      unless -d "lib";
+      unless -d 'lib' and -f 'Makefile.PL';
     unshift @INC,'lib';
     my $source_dir = shift
       or die "No source directory specified\n";
